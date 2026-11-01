@@ -5,3 +5,7 @@ package.json
 tsconfig.json
 node_modules/
 dist/
+AGENTS.md
+.antigravity/
+.agents/
+REQUIREMENTS.md

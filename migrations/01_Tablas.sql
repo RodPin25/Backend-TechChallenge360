@@ -362,7 +362,7 @@ CREATE TABLE dbo.Kardex (
     CONSTRAINT FK_Kardex_Devoluciones FOREIGN KEY (IDDevolucion) REFERENCES dbo.Devoluciones (IDDevolucion),
     CONSTRAINT FK_Kardex_Usuarios FOREIGN KEY (IDUsuario) REFERENCES dbo.Usuarios (IDUsuario)
 );
-GOa
+GO
 
 -- ============================================================================
 -- MÓDULO 8: BITÁCORA INMUTABLE (RF-09)
