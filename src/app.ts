@@ -1,19 +1,33 @@
-import express from 'express';
+// src/app.ts
+import express, { type Application, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import { authRouter, usersRouter, addressesRouter } from './routes/auth.routes';
+import { notFoundHandler, errorHandler } from './middlewares/errorHandler';
 
-const PORT = process.env.API_PORT || 3000;
+const app: Application = express();
 
-
-const app = express();
-
-//Configuraciones de seguridad y middlewares
+// Configuraciones de seguridad y middlewares globales
 app.use(helmet());
-app.use(express.json());
 app.use(cors());
-app.use(express.urlencoded({extended: true}));
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+// Endpoint de verificación de salud
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.status(200).json({
+    success: true,
+    message: 'ShopCart API funcionando correctamente.',
+  });
 });
+
+// Rutas del Módulo 1 (RF-01: Autenticación, Usuarios y Direcciones)
+app.use('/api/auth', authRouter);
+app.use('/api/users', usersRouter);
+app.use('/api/addresses', addressesRouter);
+
+// Manejo de rutas inexistentes (404) y middleware global de errores
+app.use(notFoundHandler);
+app.use(errorHandler);
+
+export default app;
