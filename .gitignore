@@ -1,7 +1,6 @@
 .env
 .ts.env
 package-lock.json
-package.json
 tsconfig.json
 node_modules/
 dist/
