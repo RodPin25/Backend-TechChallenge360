@@ -2,6 +2,7 @@
 import express, { type Application, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
+import { swaggerRouter } from './config/swagger';
 import { authRouter, usersRouter, addressesRouter } from './routes/auth.routes';
 import { catalogRouter } from './routes/catalog.routes';
 import { inventoryRouter } from './routes/inventory.routes';
@@ -19,6 +20,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Documentación interactiva OpenAPI / Swagger UI (/api/docs y /api/docs.json)
+app.use('/api', swaggerRouter);
+
 // Endpoint de verificación de salud
 app.get('/api/health', (_req: Request, res: Response) => {
   res.status(200).json({
@@ -26,6 +30,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
     message: 'ShopCart API funcionando correctamente.',
   });
 });
+
 
 // Módulo 1 (RF-01: Autenticación, Usuarios y Direcciones)
 app.use('/api/auth', authRouter);

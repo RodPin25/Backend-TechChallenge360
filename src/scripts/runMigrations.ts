@@ -114,8 +114,8 @@ export const runMigrations = async (): Promise<void> => {
       const startTime = Date.now();
       console.log(`\n⏳ Ejecutando: ${file} (${batches.length} lotes)...`);
 
-      for (let i = 0; i < batches.length; i++) {
-        const batch = batches[i];
+      for (const [i, batch] of batches.entries()) {
+        if (!batch) continue;
         try {
           await targetPool.request().batch(batch);
         } catch (batchError: any) {
@@ -131,7 +131,7 @@ export const runMigrations = async (): Promise<void> => {
     }
 
     console.log('\n=====================================================');
-    console.log('  🎉 ¡TODAS LAS MIGRACIONES Y SEEDERS FINALIZARON!    ');
+    console.log('   ¡TODAS LAS MIGRACIONES Y SEEDERS FINALIZARON!    ');
     console.log('=====================================================\n');
   } finally {
     await targetPool.close();
