@@ -1,0 +1,140 @@
+// src/routes/catalog.routes.ts
+import { Router } from 'express';
+import { catalogController } from '../controllers/catalog.controller';
+import { authenticateJWT, optionalAuthenticateJWT } from '../middlewares/auth.middleware';
+import { requireRoles } from '../middlewares/role.middleware';
+import { validateRequest } from '../middlewares/validate.middleware';
+import { ROLE_NAMES, ROLES } from '../core/constants';
+import {
+  categoryIdParamSchema,
+  createCategorySchema,
+  createProductSchema,
+  createVariantSchema,
+  deleteVariantAttributeParamsSchema,
+  listCategoriesQuerySchema,
+  listProductsQuerySchema,
+  priceHistoryQuerySchema,
+  productDetailQuerySchema,
+  productIdParamSchema,
+  saveVariantAttributeSchema,
+  updateCategorySchema,
+  updateProductSchema,
+  updateProductStatusSchema,
+  updateVariantSchema,
+  variantIdParamSchema,
+} from '../core/schemas/catalog.schema';
+
+export const catalogRouter = Router();
+
+// ============================================================================
+// 1. CATEGORÍAS (/api/catalog/categories)
+// ============================================================================
+
+catalogRouter.get(
+  '/categories',
+  optionalAuthenticateJWT,
+  validateRequest({ query: listCategoriesQuerySchema }),
+  catalogController.listCategories,
+);
+
+catalogRouter.post(
+  '/categories',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ body: createCategorySchema }),
+  catalogController.createCategory,
+);
+
+catalogRouter.put(
+  '/categories/:idCategoria',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: categoryIdParamSchema, body: updateCategorySchema }),
+  catalogController.updateCategory,
+);
+
+// ============================================================================
+// 2. PRODUCTOS (/api/catalog/products)
+// ============================================================================
+
+catalogRouter.get(
+  '/products',
+  optionalAuthenticateJWT,
+  validateRequest({ query: listProductsQuerySchema }),
+  catalogController.listProducts,
+);
+
+catalogRouter.get(
+  '/products/:idProducto',
+  optionalAuthenticateJWT,
+  validateRequest({ params: productIdParamSchema, query: productDetailQuerySchema }),
+  catalogController.getProductDetail,
+);
+
+catalogRouter.post(
+  '/products',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ body: createProductSchema }),
+  catalogController.createProduct,
+);
+
+catalogRouter.put(
+  '/products/:idProducto',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: productIdParamSchema, body: updateProductSchema }),
+  catalogController.updateProduct,
+);
+
+catalogRouter.patch(
+  '/products/:idProducto/status',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: productIdParamSchema, body: updateProductStatusSchema }),
+  catalogController.updateProductStatus,
+);
+
+// ============================================================================
+// 3. VARIANTES, ATRIBUTOS E HISTORIAL DE PRECIOS (/api/catalog/...)
+// ============================================================================
+
+catalogRouter.post(
+  '/products/:idProducto/variants',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: productIdParamSchema, body: createVariantSchema }),
+  catalogController.createVariant,
+);
+
+catalogRouter.put(
+  '/variants/:idVariante',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: variantIdParamSchema, body: updateVariantSchema }),
+  catalogController.updateVariant,
+);
+
+catalogRouter.post(
+  '/variants/:idVariante/attributes',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: variantIdParamSchema, body: saveVariantAttributeSchema }),
+  catalogController.saveVariantAttribute,
+);
+
+catalogRouter.delete(
+  '/variants/:idVariante/attributes/:idVarianteAtributo',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ params: deleteVariantAttributeParamsSchema }),
+  catalogController.deleteVariantAttribute,
+);
+
+catalogRouter.get(
+  '/price-history',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLE_NAMES.ADMIN),
+  validateRequest({ query: priceHistoryQuerySchema }),
+  catalogController.getPriceHistory,
+);
