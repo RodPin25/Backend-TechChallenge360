@@ -32,10 +32,10 @@ BEGIN
         SET @NombreCategoria = LTRIM(RTRIM(@NombreCategoria));
 
         IF @NombreCategoria = ''
-            ;THROW 50010, 'El nombre de la categoría es obligatorio.', 1;
+            THROW 50010, 'El nombre de la categoría es obligatorio.', 1;
 
         IF EXISTS (SELECT 1 FROM dbo.Categorias WHERE NombreCategoria = @NombreCategoria)
-            ;THROW 50011, 'Ya existe una categoría con ese nombre.', 1;
+            THROW 50011, 'Ya existe una categoría con ese nombre.', 1;
 
         INSERT INTO dbo.Categorias (
             NombreCategoria,
@@ -115,11 +115,11 @@ BEGIN
         WHERE IDCategoria = @IDCategoria;
 
         IF @NombreAnterior IS NULL
-            ;THROW 50012, 'La categoría especificada no existe.', 1;
+            THROW 50012, 'La categoría especificada no existe.', 1;
 
         SET @NombreCategoria = LTRIM(RTRIM(@NombreCategoria));
         IF @NombreCategoria = ''
-            ;THROW 50010, 'El nombre de la categoría es obligatorio.', 1;
+            THROW 50010, 'El nombre de la categoría es obligatorio.', 1;
 
         IF EXISTS (
             SELECT 1
@@ -127,7 +127,7 @@ BEGIN
             WHERE NombreCategoria = @NombreCategoria
               AND IDCategoria <> @IDCategoria
         )
-            ;THROW 50011, 'Ya existe otra categoría con ese nombre.', 1;
+            THROW 50011, 'Ya existe otra categoría con ese nombre.', 1;
 
         UPDATE dbo.Categorias
         SET NombreCategoria = @NombreCategoria,
@@ -223,10 +223,10 @@ BEGIN
 
         SET @NombreProducto = LTRIM(RTRIM(@NombreProducto));
         IF @NombreProducto = ''
-            ;THROW 50013, 'El nombre del producto es obligatorio.', 1;
+            THROW 50013, 'El nombre del producto es obligatorio.', 1;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Categorias WHERE IDCategoria = @IDCategoria)
-            ;THROW 50012, 'La categoría especificada no existe.', 1;
+            THROW 50012, 'La categoría especificada no existe.', 1;
 
         INSERT INTO dbo.Productos (
             IDCategoria,
@@ -312,14 +312,14 @@ BEGIN
         WHERE IDProducto = @IDProducto;
 
         IF @NombreAnt IS NULL
-            ;THROW 50014, 'El producto especificado no existe.', 1;
+            THROW 50014, 'El producto especificado no existe.', 1;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Categorias WHERE IDCategoria = @IDCategoria)
-            ;THROW 50012, 'La categoría especificada no existe.', 1;
+            THROW 50012, 'La categoría especificada no existe.', 1;
 
         SET @NombreProducto = LTRIM(RTRIM(@NombreProducto));
         IF @NombreProducto = ''
-            ;THROW 50013, 'El nombre del producto es obligatorio.', 1;
+            THROW 50013, 'El nombre del producto es obligatorio.', 1;
 
         UPDATE dbo.Productos
         SET IDCategoria = @IDCategoria,
@@ -393,7 +393,7 @@ BEGIN
         WHERE IDProducto = @IDProducto;
 
         IF @NombreProducto IS NULL
-            ;THROW 50014, 'El producto especificado no existe.', 1;
+            THROW 50014, 'El producto especificado no existe.', 1;
 
         UPDATE dbo.Productos
         SET Activo = @Activo
@@ -578,7 +578,7 @@ BEGIN
         WHERE p.IDProducto = @IDProducto
           AND (@IncluirInactivos = 1 OR (p.Activo = 1 AND c.Activo = 1))
     )
-        ;THROW 50014, 'El producto solicitado no existe o no se encuentra disponible.', 1;
+        THROW 50014, 'El producto solicitado no existe o no se encuentra disponible.', 1;
 
     -- Recordset 1: Maestro del producto
     SELECT
@@ -618,11 +618,12 @@ BEGIN
         va.IDVarianteAtributo,
         va.IDVariante,
         va.Clave,
-        va.Valor
+        va.Valor,
+        va.Activo
     FROM dbo.VarianteAtributos AS va
     INNER JOIN dbo.Variantes AS v ON v.IDVariante = va.IDVariante
     WHERE v.IDProducto = @IDProducto
-      AND (@IncluirInactivos = 1 OR v.Activo = 1)
+      AND (@IncluirInactivos = 1 OR (v.Activo = 1 AND va.Activo = 1))
     ORDER BY va.IDVariante ASC, va.Clave ASC;
 END;
 GO
@@ -656,19 +657,19 @@ BEGIN
         SET @NombreVariante = LTRIM(RTRIM(@NombreVariante));
 
         IF @SKU = '' OR @NombreVariante = ''
-            ;THROW 50015, 'El código SKU y el nombre de la variante son obligatorios.', 1;
+            THROW 50015, 'El código SKU y el nombre de la variante son obligatorios.', 1;
 
         IF @Precio < 0.00
-            ;THROW 50016, 'El precio de la variante no puede ser negativo.', 1;
+            THROW 50016, 'El precio de la variante no puede ser negativo.', 1;
 
         IF @StockInicial < 0
-            ;THROW 50017, 'La existencia inicial no puede ser negativa.', 1;
+            THROW 50017, 'La existencia inicial no puede ser negativa.', 1;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Productos WHERE IDProducto = @IDProducto)
-            ;THROW 50014, 'El producto asociado no existe.', 1;
+            THROW 50014, 'El producto asociado no existe.', 1;
 
         IF EXISTS (SELECT 1 FROM dbo.Variantes WHERE SKU = @SKU)
-            ;THROW 50018, 'El código SKU ya está asignado a otra variante.', 1;
+            THROW 50018, 'El código SKU ya está asignado a otra variante.', 1;
 
         INSERT INTO dbo.Variantes (
             IDProducto,
@@ -794,16 +795,16 @@ BEGIN
         WHERE IDVariante = @IDVariante;
 
         IF @SKUAnterior IS NULL
-            ;THROW 50019, 'La variante especificada no existe.', 1;
+            THROW 50019, 'La variante especificada no existe.', 1;
 
         SET @SKU = LTRIM(RTRIM(UPPER(@SKU)));
         SET @NombreVariante = LTRIM(RTRIM(@NombreVariante));
 
         IF @SKU = '' OR @NombreVariante = ''
-            ;THROW 50015, 'El código SKU y el nombre de la variante son obligatorios.', 1;
+            THROW 50015, 'El código SKU y el nombre de la variante son obligatorios.', 1;
 
         IF @Precio < 0.00
-            ;THROW 50016, 'El precio de la variante no puede ser negativo.', 1;
+            THROW 50016, 'El precio de la variante no puede ser negativo.', 1;
 
         IF EXISTS (
             SELECT 1
@@ -811,7 +812,7 @@ BEGIN
             WHERE SKU = @SKU
               AND IDVariante <> @IDVariante
         )
-            ;THROW 50018, 'El código SKU ya está asignado a otra variante.', 1;
+            THROW 50018, 'El código SKU ya está asignado a otra variante.', 1;
 
         UPDATE dbo.Variantes
         SET SKU = @SKU,
@@ -916,13 +917,13 @@ BEGIN
         BEGIN TRANSACTION;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Variantes WHERE IDVariante = @IDVariante)
-            ;THROW 50019, 'La variante especificada no existe.', 1;
+            THROW 50019, 'La variante especificada no existe.', 1;
 
         SET @Clave = LTRIM(RTRIM(@Clave));
         SET @Valor = LTRIM(RTRIM(@Valor));
 
         IF @Clave = '' OR @Valor = ''
-            ;THROW 50020, 'La clave y el valor del atributo son obligatorios.', 1;
+            THROW 50020, 'La clave y el valor del atributo son obligatorios.', 1;
 
         DECLARE @IDVarianteAtributo INT;
 
@@ -934,7 +935,8 @@ BEGIN
         IF @IDVarianteAtributo IS NOT NULL
         BEGIN
             UPDATE dbo.VarianteAtributos
-            SET Valor = @Valor
+            SET Valor = @Valor,
+                Activo = 1
             WHERE IDVarianteAtributo = @IDVarianteAtributo;
         END
         ELSE
@@ -942,12 +944,14 @@ BEGIN
             INSERT INTO dbo.VarianteAtributos (
                 IDVariante,
                 Clave,
-                Valor
+                Valor,
+                Activo
             )
             VALUES (
                 @IDVariante,
                 @Clave,
-                @Valor
+                @Valor,
+                1
             );
 
             SET @IDVarianteAtributo = SCOPE_IDENTITY();
@@ -959,7 +963,8 @@ BEGIN
             va.IDVarianteAtributo,
             va.IDVariante,
             va.Clave,
-            va.Valor
+            va.Valor,
+            va.Activo
         FROM dbo.VarianteAtributos AS va
         WHERE va.IDVarianteAtributo = @IDVarianteAtributo;
     END TRY
@@ -973,8 +978,8 @@ GO
 
 -- ----------------------------------------------------------------------------
 -- 12. SP_Catalogo_EliminarAtributoVariante
--- Remueve un atributo descriptivo de una variante y devuelve los atributos
--- restantes de dicha variante.
+-- Desactiva lógicamente (Activo = 0) un atributo descriptivo de una variante
+-- y devuelve los atributos activos restantes de dicha variante.
 -- ----------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE dbo.SP_Catalogo_EliminarAtributoVariante
     @IDVarianteAtributo INT,
@@ -992,10 +997,12 @@ BEGIN
             FROM dbo.VarianteAtributos
             WHERE IDVarianteAtributo = @IDVarianteAtributo
               AND IDVariante = @IDVariante
+              AND Activo = 1
         )
-            ;THROW 50021, 'El atributo especificado no existe para esta variante.', 1;
+            THROW 50021, 'El atributo especificado no existe o ya se encuentra inactivo para esta variante.', 1;
 
-        DELETE FROM dbo.VarianteAtributos
+        UPDATE dbo.VarianteAtributos
+        SET Activo = 0
         WHERE IDVarianteAtributo = @IDVarianteAtributo
           AND IDVariante = @IDVariante;
 
@@ -1005,9 +1012,11 @@ BEGIN
             va.IDVarianteAtributo,
             va.IDVariante,
             va.Clave,
-            va.Valor
+            va.Valor,
+            va.Activo
         FROM dbo.VarianteAtributos AS va
         WHERE va.IDVariante = @IDVariante
+          AND va.Activo = 1
         ORDER BY va.Clave ASC;
     END TRY
     BEGIN CATCH

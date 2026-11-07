@@ -687,14 +687,14 @@ export const openApiSpec = {
     '/catalog/variants/{idVariante}/attributes/{idVarianteAtributo}': {
       delete: {
         tags: ['Catalog'],
-        summary: 'Eliminar atributo de variante (SP_Catalogo_EliminarAtributoVariante)',
+        summary: 'Desactivar atributo de variante (borrado lógico - SP_Catalogo_EliminarAtributoVariante)',
         security: [{ bearerAuth: [] }],
         parameters: [
           { in: 'path', name: 'idVariante', required: true, schema: { type: 'integer' } },
           { in: 'path', name: 'idVarianteAtributo', required: true, schema: { type: 'integer' } },
         ],
         responses: {
-          '200': { description: 'Atributo eliminado' },
+          '200': { description: 'Atributo desactivado exitosamente (eliminación lógica)' },
         },
       },
     },

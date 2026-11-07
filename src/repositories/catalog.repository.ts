@@ -37,6 +37,7 @@ export interface VariantAttributeRecord {
   IDVariante: number;
   Clave: string;
   Valor: string;
+  Activo: boolean;
 }
 
 export interface VariantRecord {

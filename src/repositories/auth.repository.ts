@@ -33,7 +33,7 @@ export interface AddressRecord {
   CodigoPostal: string | null;
   Referencia: string | null;
   EsPrincipal: boolean;
-  Activo?: boolean;
+  Activo: boolean;
 }
 
 export interface UserProfileResult {

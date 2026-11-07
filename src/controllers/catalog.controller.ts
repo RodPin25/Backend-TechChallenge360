@@ -302,7 +302,7 @@ export class CatalogController {
       res.status(200).json({
         success: true,
         data,
-        message: 'Atributo de variante eliminado exitosamente.',
+        message: 'Atributo de variante desactivado exitosamente.',
       });
     } catch (error) {
       next(error);

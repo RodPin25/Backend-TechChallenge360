@@ -132,6 +132,7 @@ IDVarianteAtributo INT IDENTITY(1,1) NOT NULL,
 IDVariante INT NOT NULL,
 Clave NVARCHAR(50) NOT NULL,
 Valor NVARCHAR(100) NOT NULL,
+Activo BIT NOT NULL CONSTRAINT DF_VarianteAtributos_Activo DEFAULT (1),
 CONSTRAINT PK_VarianteAtributos PRIMARY KEY CLUSTERED (IDVarianteAtributo),
 CONSTRAINT FK_VarianteAtributos_Variantes FOREIGN KEY (IDVariante) REFERENCES dbo.Variantes (IDVariante)
 );
@@ -387,6 +388,7 @@ GO
 -- ÍNDICES PARA RENDIMIENTO
 -- ============================================================================
 CREATE NONCLUSTERED INDEX IX_Variantes_IDProducto ON dbo.Variantes (IDProducto);
+CREATE NONCLUSTERED INDEX IX_VarianteAtributos_Variante ON dbo.VarianteAtributos (IDVariante, Activo);
 CREATE NONCLUSTERED INDEX IX_Reservas_Variante_Estado ON dbo.ReservasExistencia (IDVariante, Estado, FechaExpiracion);
 CREATE NONCLUSTERED INDEX IX_Carritos_Usuario_Estado ON dbo.Carritos (IDUsuario, Estado);
 CREATE NONCLUSTERED INDEX IX_Pedidos_Usuario_Estado ON dbo.Pedidos (IDUsuario, EstadoPedido);

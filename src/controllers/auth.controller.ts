@@ -287,7 +287,7 @@ export class AuthController {
       res.status(200).json({
         success: true,
         data,
-        message: 'Dirección eliminada exitosamente.',
+        message: 'Dirección desactivada exitosamente.',
       });
     } catch (error) {
       next(error);

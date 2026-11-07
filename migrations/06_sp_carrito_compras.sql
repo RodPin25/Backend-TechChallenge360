@@ -38,7 +38,7 @@ BEGIN
         SET @CodigoCupon = NULLIF(LTRIM(RTRIM(UPPER(@CodigoCupon))), '');
 
         IF @IDUsuario IS NULL AND @TokenInvitado IS NULL
-            ;THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado para consultar el carrito.', 1;
+            THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado para consultar el carrito.', 1;
 
         DECLARE @IDCarrito INT;
 
@@ -236,13 +236,13 @@ BEGIN
         SET @ModoOperacion = UPPER(LTRIM(RTRIM(ISNULL(@ModoOperacion, 'SUMAR'))));
 
         IF @IDUsuario IS NULL AND @TokenInvitado IS NULL
-            ;THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
+            THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
 
         IF @Cantidad <= 0
-            ;THROW 50042, 'La cantidad del producto en el carrito debe ser mayor a cero.', 1;
+            THROW 50042, 'La cantidad del producto en el carrito debe ser mayor a cero.', 1;
 
         IF @ModoOperacion NOT IN ('SUMAR', 'FIJAR')
-            ;THROW 50043, 'El modo de operación debe ser SUMAR o FIJAR.', 1;
+            THROW 50043, 'El modo de operación debe ser SUMAR o FIJAR.', 1;
 
         -- 1. Obtener o crear el carrito activo del usuario o invitado
         DECLARE @IDCarrito INT;
@@ -302,10 +302,10 @@ BEGIN
         WHERE v.IDVariante = @IDVariante;
 
         IF @StockFisico IS NULL
-            ;THROW 50019, 'La variante seleccionada no existe.', 1;
+            THROW 50019, 'La variante seleccionada no existe.', 1;
 
         IF @VarianteActiva = 0
-            ;THROW 50032, 'El producto o variante seleccionada no se encuentra disponible para la venta.', 1;
+            THROW 50032, 'El producto o variante seleccionada no se encuentra disponible para la venta.', 1;
 
         -- 3. Liberar reservas expiradas de la variante antes de validar disponibilidad
         UPDATE dbo.ReservasExistencia
@@ -358,7 +358,7 @@ BEGIN
                 @NombreVariante, N'" (SKU: ', @SKU, N'). Solicitado: ', @CantidadFinal,
                 N', Disponible: ', @StockDisponibleCliente, N'.'
             );
-            ;THROW 50044, @MensajeStockCarrito, 1;
+            THROW 50044, @MensajeStockCarrito, 1;
         END
 
         -- 6. Insertar o actualizar en CarritoDetalle y refrescar FechaActualizacion del carrito
@@ -423,7 +423,7 @@ BEGIN
         SET @TokenInvitado = NULLIF(LTRIM(RTRIM(@TokenInvitado)), '');
 
         IF @IDUsuario IS NULL AND @TokenInvitado IS NULL
-            ;THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
+            THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
 
         DECLARE @IDCarrito INT;
 
@@ -446,7 +446,7 @@ BEGIN
         END
 
         IF @IDCarrito IS NULL
-            ;THROW 50034, 'No se encontró un carrito activo para el usuario o sesión.', 1;
+            THROW 50034, 'No se encontró un carrito activo para el usuario o sesión.', 1;
 
         IF NOT EXISTS (
             SELECT 1
@@ -454,7 +454,7 @@ BEGIN
             WHERE IDCarrito = @IDCarrito
               AND IDVariante = @IDVariante
         )
-            ;THROW 50045, 'El producto especificado no se encuentra en el carrito.', 1;
+            THROW 50045, 'El producto especificado no se encuentra en el carrito.', 1;
 
         DELETE FROM dbo.CarritoDetalle
         WHERE IDCarrito = @IDCarrito
@@ -507,7 +507,7 @@ BEGIN
         SET @TokenInvitado = NULLIF(LTRIM(RTRIM(@TokenInvitado)), '');
 
         IF @IDUsuario IS NULL AND @TokenInvitado IS NULL
-            ;THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
+            THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
 
         DECLARE @IDCarrito INT;
 
@@ -583,10 +583,10 @@ BEGIN
         SET @TokenInvitado = NULLIF(LTRIM(RTRIM(@TokenInvitado)), '');
 
         IF @IDUsuario IS NULL OR @TokenInvitado IS NULL
-            ;THROW 50046, 'Se requiere tanto el IDUsuario como el TokenInvitado para fusionar el carrito.', 1;
+            THROW 50046, 'Se requiere tanto el IDUsuario como el TokenInvitado para fusionar el carrito.', 1;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario AND Activo = 1)
-            ;THROW 50004, 'El usuario autenticado no existe o está inactivo.', 1;
+            THROW 50004, 'El usuario autenticado no existe o está inactivo.', 1;
 
         DECLARE @IDCarritoInvitado INT;
         DECLARE @IDCarritoUsuario INT;

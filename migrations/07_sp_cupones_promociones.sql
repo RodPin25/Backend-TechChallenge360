@@ -44,31 +44,31 @@ BEGIN
         SET @TipoDescuento = LTRIM(RTRIM(UPPER(@TipoDescuento)));
 
         IF @Codigo = ''
-            ;THROW 50050, 'El código del cupón es obligatorio.', 1;
+            THROW 50050, 'El código del cupón es obligatorio.', 1;
 
         IF EXISTS (SELECT 1 FROM dbo.Cupones WHERE Codigo = @Codigo)
-            ;THROW 50051, 'Ya existe un cupón registrado con ese código.', 1;
+            THROW 50051, 'Ya existe un cupón registrado con ese código.', 1;
 
         IF @TipoDescuento NOT IN ('PORCENTAJE', 'MONTO_FIJO')
-            ;THROW 50052, 'El tipo de descuento debe ser PORCENTAJE o MONTO_FIJO.', 1;
+            THROW 50052, 'El tipo de descuento debe ser PORCENTAJE o MONTO_FIJO.', 1;
 
         IF @ValorDescuento <= 0.00
-            ;THROW 50053, 'El valor del descuento debe ser mayor a cero.', 1;
+            THROW 50053, 'El valor del descuento debe ser mayor a cero.', 1;
 
         IF @TipoDescuento = 'PORCENTAJE' AND @ValorDescuento > 100.00
-            ;THROW 50054, 'En cupones de porcentaje, el valor de descuento no puede superar el 100%.', 1;
+            THROW 50054, 'En cupones de porcentaje, el valor de descuento no puede superar el 100%.', 1;
 
         IF @MontoMinimoCompra < 0.00
-            ;THROW 50055, 'El monto mínimo de compra no puede ser negativo.', 1;
+            THROW 50055, 'El monto mínimo de compra no puede ser negativo.', 1;
 
         IF @FechaFin < @FechaInicio
-            ;THROW 50056, 'La fecha de fin de vigencia no puede ser anterior a la fecha de inicio.', 1;
+            THROW 50056, 'La fecha de fin de vigencia no puede ser anterior a la fecha de inicio.', 1;
 
         IF @LimiteUsosTotal <= 0 OR @LimiteUsosPorCliente <= 0
-            ;THROW 50057, 'El límite total de usos y el límite por cliente deben ser mayores a cero.', 1;
+            THROW 50057, 'El límite total de usos y el límite por cliente deben ser mayores a cero.', 1;
 
         IF @IDCategoria IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Categorias WHERE IDCategoria = @IDCategoria)
-            ;THROW 50012, 'La categoría asociada al cupón no existe.', 1;
+            THROW 50012, 'La categoría asociada al cupón no existe.', 1;
 
         INSERT INTO dbo.Cupones (
             Codigo,
@@ -197,40 +197,40 @@ BEGIN
         WHERE IDCupon = @IDCupon;
 
         IF @CodigoAnt IS NULL
-            ;THROW 50058, 'El cupón especificado no existe.', 1;
+            THROW 50058, 'El cupón especificado no existe.', 1;
 
         SET @Codigo = LTRIM(RTRIM(UPPER(@Codigo)));
         SET @TipoDescuento = LTRIM(RTRIM(UPPER(@TipoDescuento)));
 
         IF @Codigo = ''
-            ;THROW 50050, 'El código del cupón es obligatorio.', 1;
+            THROW 50050, 'El código del cupón es obligatorio.', 1;
 
         IF EXISTS (SELECT 1 FROM dbo.Cupones WHERE Codigo = @Codigo AND IDCupon <> @IDCupon)
-            ;THROW 50051, 'Ya existe otro cupón con ese código.', 1;
+            THROW 50051, 'Ya existe otro cupón con ese código.', 1;
 
         IF @TipoDescuento NOT IN ('PORCENTAJE', 'MONTO_FIJO')
-            ;THROW 50052, 'El tipo de descuento debe ser PORCENTAJE o MONTO_FIJO.', 1;
+            THROW 50052, 'El tipo de descuento debe ser PORCENTAJE o MONTO_FIJO.', 1;
 
         IF @ValorDescuento <= 0.00
-            ;THROW 50053, 'El valor del descuento debe ser mayor a cero.', 1;
+            THROW 50053, 'El valor del descuento debe ser mayor a cero.', 1;
 
         IF @TipoDescuento = 'PORCENTAJE' AND @ValorDescuento > 100.00
-            ;THROW 50054, 'En cupones de porcentaje, el valor de descuento no puede superar el 100%.', 1;
+            THROW 50054, 'En cupones de porcentaje, el valor de descuento no puede superar el 100%.', 1;
 
         IF @MontoMinimoCompra < 0.00
-            ;THROW 50055, 'El monto mínimo de compra no puede ser negativo.', 1;
+            THROW 50055, 'El monto mínimo de compra no puede ser negativo.', 1;
 
         IF @FechaFin < @FechaInicio
-            ;THROW 50056, 'La fecha de fin de vigencia no puede ser anterior a la fecha de inicio.', 1;
+            THROW 50056, 'La fecha de fin de vigencia no puede ser anterior a la fecha de inicio.', 1;
 
         IF @LimiteUsosTotal <= 0 OR @LimiteUsosPorCliente <= 0
-            ;THROW 50057, 'El límite total de usos y el límite por cliente deben ser mayores a cero.', 1;
+            THROW 50057, 'El límite total de usos y el límite por cliente deben ser mayores a cero.', 1;
 
         IF @LimiteUsosTotal < @UsosActuales
-            ;THROW 50059, 'El límite total de usos no puede ser menor que los usos ya consumidos del cupón.', 1;
+            THROW 50059, 'El límite total de usos no puede ser menor que los usos ya consumidos del cupón.', 1;
 
         IF @IDCategoria IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Categorias WHERE IDCategoria = @IDCategoria)
-            ;THROW 50012, 'La categoría asociada al cupón no existe.', 1;
+            THROW 50012, 'La categoría asociada al cupón no existe.', 1;
 
         UPDATE dbo.Cupones
         SET Codigo = @Codigo,
@@ -317,7 +317,7 @@ BEGIN
         WHERE IDCupon = @IDCupon;
 
         IF @Codigo IS NULL
-            ;THROW 50058, 'El cupón especificado no existe.', 1;
+            THROW 50058, 'El cupón especificado no existe.', 1;
 
         UPDATE dbo.Cupones
         SET Activo = @Activo
@@ -449,7 +449,7 @@ BEGIN
     SET NOCOUNT ON;
 
     IF NOT EXISTS (SELECT 1 FROM dbo.Cupones WHERE IDCupon = @IDCupon)
-        ;THROW 50058, 'El cupón solicitado no existe.', 1;
+        THROW 50058, 'El cupón solicitado no existe.', 1;
 
     -- Recordset 1: Datos del cupón
     SELECT
@@ -511,10 +511,10 @@ BEGIN
     SET @TokenInvitado = NULLIF(LTRIM(RTRIM(@TokenInvitado)), '');
 
     IF @Codigo = ''
-        ;THROW 50050, 'Debe ingresar un código de cupón.', 1;
+        THROW 50050, 'Debe ingresar un código de cupón.', 1;
 
     IF @IDUsuario IS NULL AND @TokenInvitado IS NULL
-        ;THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
+        THROW 50041, 'Debe especificar un usuario autenticado o un token de invitado.', 1;
 
     DECLARE @IDCarrito INT;
 
@@ -537,7 +537,7 @@ BEGIN
     END
 
     IF @IDCarrito IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.CarritoDetalle WHERE IDCarrito = @IDCarrito)
-        ;THROW 50035, 'El carrito se encuentra vacío; agregue productos antes de aplicar un cupón.', 1;
+        THROW 50035, 'El carrito se encuentra vacío; agregue productos antes de aplicar un cupón.', 1;
 
     DECLARE @IDCategoriaCupon INT;
     SELECT @IDCategoriaCupon = IDCategoria
@@ -594,7 +594,7 @@ BEGIN
 
     -- Si no es válido, rechazar con código 50060 y el mensaje específico de negocio
     IF @EsValido = 0
-        ;THROW 50060, @MensajeValidacion, 1;
+        THROW 50060, @MensajeValidacion, 1;
 
     SELECT
         @IDCarrito AS IDCarrito,
