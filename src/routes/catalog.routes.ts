@@ -4,8 +4,10 @@ import { catalogController } from '../controllers/catalog.controller';
 import { authenticateJWT, optionalAuthenticateJWT } from '../middlewares/auth.middleware';
 import { requireRoles } from '../middlewares/role.middleware';
 import { validateRequest } from '../middlewares/validate.middleware';
+import { uploadVariantImage } from '../middlewares/upload.middleware';
 import { ROLE_NAMES, ROLES } from '../core/constants';
 import {
+  addVariantImageSchema,
   categoryIdParamSchema,
   createCategorySchema,
   createProductSchema,
@@ -21,7 +23,9 @@ import {
   updateProductSchema,
   updateProductStatusSchema,
   updateVariantSchema,
+  uploadVariantImageBodySchema,
   variantIdParamSchema,
+  variantImageParamsSchema,
 } from '../core/schemas/catalog.schema';
 
 export const catalogRouter = Router();
@@ -138,3 +142,51 @@ catalogRouter.get(
   validateRequest({ query: priceHistoryQuerySchema }),
   catalogController.getPriceHistory,
 );
+
+// ============================================================================
+// 4. IMÁGENES DE VARIANTES (/api/catalog/variants/:idVariante/images)
+// ============================================================================
+
+// Subida física de archivo multimedia (multipart/form-data)
+catalogRouter.post(
+  '/variants/:idVariante/images/upload',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLES.OPERADOR, ROLE_NAMES.ADMIN, ROLE_NAMES.OPERADOR),
+  uploadVariantImage.single('file'),
+  validateRequest({
+    params: variantIdParamSchema,
+    body: uploadVariantImageBodySchema,
+  }),
+  catalogController.uploadVariantImage,
+);
+
+// Asociación mediante URL directa (application/json)
+catalogRouter.post(
+  '/variants/:idVariante/images',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLES.OPERADOR, ROLE_NAMES.ADMIN, ROLE_NAMES.OPERADOR),
+  validateRequest({
+    params: variantIdParamSchema,
+    body: addVariantImageSchema,
+  }),
+  catalogController.addVariantImage,
+);
+
+// Establecer imagen como principal de la variante
+catalogRouter.patch(
+  '/variants/:idVariante/images/:idVarianteImagen/primary',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLES.OPERADOR, ROLE_NAMES.ADMIN, ROLE_NAMES.OPERADOR),
+  validateRequest({ params: variantImageParamsSchema }),
+  catalogController.setPrimaryVariantImage,
+);
+
+// Desactivación lógica de imagen de la variante
+catalogRouter.delete(
+  '/variants/:idVariante/images/:idVarianteImagen',
+  authenticateJWT,
+  requireRoles(ROLES.ADMIN, ROLES.OPERADOR, ROLE_NAMES.ADMIN, ROLE_NAMES.OPERADOR),
+  validateRequest({ params: variantImageParamsSchema }),
+  catalogController.deleteVariantImage,
+);
+

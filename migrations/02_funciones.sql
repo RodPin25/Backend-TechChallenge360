@@ -369,3 +369,140 @@ RETURN
       AND (@IDVariante IS NULL OR pd.IDVariante = @IDVariante)
 );
 GO
+
+-- ============================================================================
+-- ALIAS DE COMPATIBILIDAD CON PREFIJO FN_ (AGENTS.md)
+-- ============================================================================
+CREATE OR ALTER FUNCTION dbo.FN_Inventario_StockDisponible
+(
+    @IDVariante INT
+)
+RETURNS INT
+AS
+BEGIN
+    RETURN dbo.FU_Inventario_StockDisponible(@IDVariante);
+END;
+GO
+
+CREATE OR ALTER FUNCTION dbo.FN_Inventario_DetalleDisponibilidad
+(
+    @IDVariante INT
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT
+        IDVariante,
+        StockFisico,
+        StockReservado,
+        StockDisponible
+    FROM dbo.FU_Inventario_DetalleDisponibilidad(@IDVariante)
+);
+GO
+
+CREATE OR ALTER FUNCTION dbo.FN_Finanzas_DesgloseIVA
+(
+    @MontoConIVA DECIMAL(12,2)
+)
+RETURNS TABLE
+WITH SCHEMABINDING
+AS
+RETURN
+(
+    SELECT
+        CAST(ISNULL(@MontoConIVA, 0.00) AS DECIMAL(12,2)) AS MontoConIVA,
+        CAST(ROUND(ISNULL(@MontoConIVA, 0.00) / 1.12, 2) AS DECIMAL(12,2)) AS MontoSinIVA,
+        CAST(
+            ISNULL(@MontoConIVA, 0.00) - CAST(ROUND(ISNULL(@MontoConIVA, 0.00) / 1.12, 2) AS DECIMAL(12,2))
+            AS DECIMAL(12,2)
+        ) AS MontoIVA
+);
+GO
+
+CREATE OR ALTER FUNCTION dbo.FN_Catalogo_PrecioVigente
+(
+    @IDVariante INT
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT
+        IDVariante,
+        IDProducto,
+        IDCategoria,
+        SKU,
+        NombreVariante,
+        PrecioVigente,
+        PrecioSinIVA,
+        MontoIVAUnitario,
+        VarianteActiva,
+        ProductoActivo,
+        CategoriaActiva,
+        DisponibleVenta,
+        FechaUltimaModificacionPrecio
+    FROM dbo.FU_Catalogo_PrecioVigente(@IDVariante)
+);
+GO
+
+CREATE OR ALTER FUNCTION dbo.FN_Cupones_CalculoDescuento
+(
+    @Codigo VARCHAR(30),
+    @IDUsuario INT = NULL,
+    @SubtotalTotalCarrito DECIMAL(12,2),
+    @SubtotalCategoriaElegible DECIMAL(12,2) = NULL
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT
+        IDCupon,
+        Codigo,
+        TipoDescuento,
+        ValorDescuento,
+        MontoMinimoCompra,
+        IDCategoria,
+        EsValido,
+        MensajeValidacion,
+        MontoDescuento,
+        TotalConDescuento
+    FROM dbo.FU_Cupones_CalculoDescuento(@Codigo, @IDUsuario, @SubtotalTotalCarrito, @SubtotalCategoriaElegible)
+);
+GO
+
+CREATE OR ALTER FUNCTION dbo.FN_Pedidos_ValidarTransicionEstado
+(
+    @EstadoActual VARCHAR(30),
+    @EstadoNuevo VARCHAR(30)
+)
+RETURNS BIT
+AS
+BEGIN
+    RETURN dbo.FU_Pedidos_ValidarTransicionEstado(@EstadoActual, @EstadoNuevo);
+END;
+GO
+
+CREATE OR ALTER FUNCTION dbo.FN_Pedidos_SaldoDevolucionLinea
+(
+    @IDPedido INT,
+    @IDVariante INT = NULL
+)
+RETURNS TABLE
+AS
+RETURN
+(
+    SELECT
+        IDPedido,
+        IDPedidoDetalle,
+        IDVariante,
+        CantidadComprada,
+        PrecioUnitarioCongelado,
+        DescuentoAplicado,
+        SubtotalLinea,
+        CantidadYaDevuelta,
+        CantidadDisponibleDevolver
+    FROM dbo.FU_Pedidos_SaldoDevolucionLinea(@IDPedido, @IDVariante)
+);
+GO

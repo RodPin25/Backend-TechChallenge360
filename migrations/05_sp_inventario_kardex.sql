@@ -275,6 +275,9 @@ BEGIN
         DECLARE @VarianteActiva BIT;
         DECLARE @SKU VARCHAR(50);
         DECLARE @NombreVariante NVARCHAR(100);
+        DECLARE @Disp INT;
+        DECLARE @MsgInactivo NVARCHAR(250);
+        DECLARE @MsgStock NVARCHAR(250);
         DECLARE @FechaAhora DATETIME2(0) = SYSDATETIME();
         DECLARE @FechaExpiracion DATETIME2(0) = DATEADD(MINUTE, 15, @FechaAhora);
 
@@ -301,7 +304,7 @@ BEGIN
 
             IF @VarianteActiva = 0
             BEGIN
-                DECLARE @MsgInactivo NVARCHAR(250) = CONCAT(
+                SET @MsgInactivo = CONCAT(
                     N'El artículo "', @NombreVariante, N'" (SKU: ', @SKU, N') ya no se encuentra disponible.'
                 );
                 THROW 50032, @MsgInactivo, 1;
@@ -315,8 +318,8 @@ BEGIN
 
             IF (@StockFisico - @StockReservadoOtros) < @CantidadSolicitada
             BEGIN
-                DECLARE @Disp INT = CASE WHEN (@StockFisico - @StockReservadoOtros) < 0 THEN 0 ELSE (@StockFisico - @StockReservadoOtros) END;
-                DECLARE @MsgStock NVARCHAR(250) = CONCAT(
+                SET @Disp = CASE WHEN (@StockFisico - @StockReservadoOtros) < 0 THEN 0 ELSE (@StockFisico - @StockReservadoOtros) END;
+                SET @MsgStock = CONCAT(
                     N'Existencia insuficiente para "', @NombreVariante,
                     N'" (SKU: ', @SKU, N'). Solicitado: ', @CantidadSolicitada,
                     N', Disponible: ', @Disp, N'.'

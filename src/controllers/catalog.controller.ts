@@ -1,9 +1,10 @@
 // src/controllers/catalog.controller.ts
 import type { Request, Response, NextFunction } from 'express';
 import { catalogService } from '../services/catalog.service';
-import { UnauthorizedError } from '../core/errors';
+import { BadRequestError, UnauthorizedError } from '../core/errors';
 import { ROLE_NAMES, ROLES } from '../core/constants';
 import type {
+  AddVariantImageInput,
   CreateCategoryInput,
   CreateProductInput,
   CreateVariantInput,
@@ -16,6 +17,7 @@ import type {
   UpdateProductInput,
   UpdateProductStatusInput,
   UpdateVariantInput,
+  UploadVariantImageBody,
 } from '../core/schemas/catalog.schema';
 
 export class CatalogController {
@@ -321,6 +323,117 @@ export class CatalogController {
       res.status(200).json({
         success: true,
         data,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  // ==========================================================================
+  // 4. IMÁGENES DE VARIANTES
+  // ==========================================================================
+
+  public uploadVariantImage = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const idUsuario = this.getAuthenticatedUserId(req);
+      const idVariante = Number(req.params.idVariante);
+
+      if (!req.file) {
+        throw new BadRequestError('No se proporcionó ningún archivo de imagen para cargar.');
+      }
+
+      // Ruta relativa servida estáticamente desde Express
+      const urlImagen = `/uploads/variantes/${req.file.filename}`;
+      const body = req.body as UploadVariantImageBody;
+
+      const data = await catalogService.addVariantImage(idUsuario, idVariante, {
+        urlImagen,
+        esPrincipal: body.esPrincipal,
+        orden: body.orden,
+      });
+
+      res.status(201).json({
+        success: true,
+        data,
+        message: 'Imagen subida y asociada a la variante exitosamente.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public addVariantImage = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const idUsuario = this.getAuthenticatedUserId(req);
+      const idVariante = Number(req.params.idVariante);
+      const body = req.body as AddVariantImageInput;
+
+      const data = await catalogService.addVariantImage(idUsuario, idVariante, body);
+
+      res.status(201).json({
+        success: true,
+        data,
+        message: 'Imagen asociada a la variante exitosamente.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public setPrimaryVariantImage = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const idUsuario = this.getAuthenticatedUserId(req);
+      const idVariante = Number(req.params.idVariante);
+      const idVarianteImagen = Number(req.params.idVarianteImagen);
+
+      const data = await catalogService.setPrimaryVariantImage(
+        idUsuario,
+        idVariante,
+        idVarianteImagen,
+      );
+
+      res.status(200).json({
+        success: true,
+        data,
+        message: 'Imagen establecida como principal exitosamente.',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  public deleteVariantImage = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const idUsuario = this.getAuthenticatedUserId(req);
+      const idVariante = Number(req.params.idVariante);
+      const idVarianteImagen = Number(req.params.idVarianteImagen);
+
+      const data = await catalogService.deleteVariantImage(
+        idUsuario,
+        idVariante,
+        idVarianteImagen,
+      );
+
+      res.status(200).json({
+        success: true,
+        data,
+        message: 'Imagen de variante desactivada exitosamente.',
       });
     } catch (error) {
       next(error);

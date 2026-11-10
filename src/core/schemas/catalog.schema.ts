@@ -217,3 +217,41 @@ export const priceHistoryQuerySchema = z.object({
 });
 
 export type PriceHistoryQuery = z.infer<typeof priceHistoryQuerySchema>;
+
+// ============================================================================
+// 4. ESQUEMAS DE IMÁGENES DE VARIANTES (/api/catalog/variants/:id/images)
+// ============================================================================
+
+export const addVariantImageSchema = z.object({
+  urlImagen: z
+    .string()
+    .trim()
+    .min(1, 'La URL de la imagen es obligatoria.')
+    .max(500, 'La URL de la imagen no debe exceder 500 caracteres.'),
+  esPrincipal: z.boolean().optional().default(false),
+  orden: z.coerce.number().int().positive().optional(),
+});
+
+export type AddVariantImageInput = z.infer<typeof addVariantImageSchema>;
+
+export const uploadVariantImageBodySchema = z.object({
+  esPrincipal: z
+    .union([z.boolean(), z.enum(['true', 'false', '1', '0'])])
+    .transform((val) => val === true || val === 'true' || val === '1')
+    .optional()
+    .default(false),
+  orden: z.coerce.number().int().positive().optional(),
+});
+
+export type UploadVariantImageBody = z.infer<typeof uploadVariantImageBodySchema>;
+
+export const variantImageParamsSchema = z.object({
+  idVariante: z.coerce.number().int().positive('El IDVariante debe ser un entero positivo.'),
+  idVarianteImagen: z.coerce
+    .number()
+    .int()
+    .positive('El IDVarianteImagen debe ser un entero positivo.'),
+});
+
+export type VariantImageParams = z.infer<typeof variantImageParamsSchema>;
+

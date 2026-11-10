@@ -274,6 +274,10 @@ BEGIN
         DECLARE @SKUIter VARCHAR(50);
         DECLARE @NombreVarianteIter NVARCHAR(100);
         DECLARE @DisponibleVentaIter BIT;
+        DECLARE @MsgProdInactivo NVARCHAR(250);
+        DECLARE @StockDispMsg INT;
+        DECLARE @MsgSinStockCheckout NVARCHAR(250);
+        DECLARE @SubBruto DECIMAL(12,2);
 
         DECLARE cur_checkout CURSOR LOCAL FAST_FORWARD FOR
             SELECT cd.IDVariante, cd.Cantidad
@@ -301,7 +305,7 @@ BEGIN
 
             IF @DisponibleVentaIter = 0
             BEGIN
-                DECLARE @MsgProdInactivo NVARCHAR(250) = CONCAT(
+                SET @MsgProdInactivo = CONCAT(
                     N'El producto "', @NombreVarianteIter, N'" (SKU: ', @SKUIter, N') ya no se encuentra disponible para la venta.'
                 );
                 THROW 50032, @MsgProdInactivo, 1;
@@ -317,8 +321,8 @@ BEGIN
 
             IF (@StockFisicoIter - @ReservadoOtrosIter) < @CantidadIter
             BEGIN
-                DECLARE @StockDispMsg INT = CASE WHEN (@StockFisicoIter - @ReservadoOtrosIter) < 0 THEN 0 ELSE (@StockFisicoIter - @ReservadoOtrosIter) END;
-                DECLARE @MsgSinStockCheckout NVARCHAR(250) = CONCAT(
+                SET @StockDispMsg = CASE WHEN (@StockFisicoIter - @ReservadoOtrosIter) < 0 THEN 0 ELSE (@StockFisicoIter - @ReservadoOtrosIter) END;
+                SET @MsgSinStockCheckout = CONCAT(
                     N'No hay existencia disponible para "', @NombreVarianteIter,
                     N'" (SKU: ', @SKUIter, N'). Solicitado: ', @CantidadIter,
                     N', Disponible: ', @StockDispMsg, N'.'
@@ -326,7 +330,7 @@ BEGIN
                 THROW 50033, @MsgSinStockCheckout, 1;
             END
 
-            DECLARE @SubBruto DECIMAL(12,2) = CAST(CAST(@CantidadIter AS DECIMAL(12,2)) * @PrecioIter AS DECIMAL(12,2));
+            SET @SubBruto = CAST(CAST(@CantidadIter AS DECIMAL(12,2)) * @PrecioIter AS DECIMAL(12,2));
 
             INSERT INTO #LineasCheckout (
                 IDVariante,

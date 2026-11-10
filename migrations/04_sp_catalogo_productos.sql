@@ -473,7 +473,8 @@ BEGIN
             ISNULL(agg.PrecioMinimo, 0.00) AS PrecioDesde,
             ISNULL(agg.PrecioMaximo, 0.00) AS PrecioHasta,
             ISNULL(agg.StockFisicoTotal, 0) AS StockFisicoTotal,
-            ISNULL(agg.StockDisponibleTotal, 0) AS StockDisponibleTotal
+            ISNULL(agg.StockDisponibleTotal, 0) AS StockDisponibleTotal,
+            imgPortada.UrlImagen AS ImagenPortada
         FROM dbo.Productos AS p
         INNER JOIN dbo.Categorias AS c ON c.IDCategoria = p.IDCategoria
         OUTER APPLY (
@@ -488,6 +489,15 @@ BEGIN
             WHERE v.IDProducto = p.IDProducto
               AND (@SoloActivos = 0 OR v.Activo = 1)
         ) AS agg
+        OUTER APPLY (
+            SELECT TOP (1) vi.UrlImagen
+            FROM dbo.Variantes AS vimg
+            INNER JOIN dbo.VarianteImagenes AS vi ON vi.IDVariante = vimg.IDVariante
+            WHERE vimg.IDProducto = p.IDProducto
+              AND (@SoloActivos = 0 OR vimg.Activo = 1)
+              AND vi.Activo = 1
+            ORDER BY vi.EsPrincipal DESC, vi.Orden ASC, vi.IDVarianteImagen ASC
+        ) AS imgPortada
         WHERE (@SoloActivos = 0 OR (p.Activo = 1 AND c.Activo = 1))
           AND (@IDCategoria IS NULL OR p.IDCategoria = @IDCategoria)
           AND (
@@ -517,7 +527,8 @@ BEGIN
         PrecioDesde,
         PrecioHasta,
         StockFisicoTotal,
-        StockDisponibleTotal
+        StockDisponibleTotal,
+        ImagenPortada
     INTO #ProductosFiltrados
     FROM ProductosConMetricas;
 
@@ -541,6 +552,7 @@ BEGIN
         iva.MontoIVA AS PrecioDesdeIVA,
         pf.StockFisicoTotal,
         pf.StockDisponibleTotal,
+        pf.ImagenPortada,
         CAST(CASE WHEN pf.StockDisponibleTotal > 0 THEN 1 ELSE 0 END AS BIT) AS TieneDisponibilidad
     FROM #ProductosFiltrados AS pf
     CROSS APPLY dbo.FU_Finanzas_DesgloseIVA(pf.PrecioDesde) AS iva
@@ -559,10 +571,11 @@ GO
 
 -- ----------------------------------------------------------------------------
 -- 8. SP_Catalogo_ObtenerDetalleProducto
--- Devuelve 3 recordsets limpios para el driver mssql:
+-- Devuelve 4 recordsets limpios para el driver mssql:
 --   1) Datos del Producto y Categoría
---   2) Variantes con su Precio, IVA y StockDisponible real
+--   2) Variantes con su Precio, IVA, StockDisponible real e ImagenPrincipal
 --   3) Atributos (Clave/Valor) de las variantes del producto
+--   4) Galería de Imágenes de las variantes (UrlImagen, EsPrincipal, Orden)
 -- ----------------------------------------------------------------------------
 CREATE OR ALTER PROCEDURE dbo.SP_Catalogo_ObtenerDetalleProducto
     @IDProducto INT,
@@ -593,7 +606,7 @@ BEGIN
     INNER JOIN dbo.Categorias AS c ON c.IDCategoria = p.IDCategoria
     WHERE p.IDProducto = @IDProducto;
 
-    -- Recordset 2: Variantes con precio vigente y disponibilidad real
+    -- Recordset 2: Variantes con precio vigente, disponibilidad real e imagen principal
     SELECT
         v.IDVariante,
         v.IDProducto,
@@ -605,10 +618,18 @@ BEGIN
         disp.StockFisico,
         disp.StockReservado,
         disp.StockDisponible,
+        img.UrlImagen AS ImagenPrincipal,
         v.Activo
     FROM dbo.Variantes AS v
     CROSS APPLY dbo.FU_Finanzas_DesgloseIVA(v.Precio) AS iva
     CROSS APPLY dbo.FU_Inventario_DetalleDisponibilidad(v.IDVariante) AS disp
+    OUTER APPLY (
+        SELECT TOP (1) vi.UrlImagen
+        FROM dbo.VarianteImagenes AS vi
+        WHERE vi.IDVariante = v.IDVariante
+          AND (@IncluirInactivos = 1 OR vi.Activo = 1)
+        ORDER BY vi.EsPrincipal DESC, vi.Orden ASC, vi.IDVarianteImagen ASC
+    ) AS img
     WHERE v.IDProducto = @IDProducto
       AND (@IncluirInactivos = 1 OR v.Activo = 1)
     ORDER BY v.IDVariante ASC;
@@ -625,6 +646,20 @@ BEGIN
     WHERE v.IDProducto = @IDProducto
       AND (@IncluirInactivos = 1 OR (v.Activo = 1 AND va.Activo = 1))
     ORDER BY va.IDVariante ASC, va.Clave ASC;
+
+    -- Recordset 4: Galería de imágenes de las variantes del producto
+    SELECT
+        vi.IDVarianteImagen,
+        vi.IDVariante,
+        vi.UrlImagen,
+        vi.EsPrincipal,
+        vi.Orden,
+        vi.Activo
+    FROM dbo.VarianteImagenes AS vi
+    INNER JOIN dbo.Variantes AS v ON v.IDVariante = vi.IDVariante
+    WHERE v.IDProducto = @IDProducto
+      AND (@IncluirInactivos = 1 OR (v.Activo = 1 AND vi.Activo = 1))
+    ORDER BY vi.IDVariante ASC, vi.EsPrincipal DESC, vi.Orden ASC, vi.IDVarianteImagen ASC;
 END;
 GO
 
@@ -1059,5 +1094,287 @@ BEGIN
     WHERE (@IDVariante IS NULL OR hp.IDVariante = @IDVariante)
       AND (@IDProducto IS NULL OR v.IDProducto = @IDProducto)
     ORDER BY hp.FechaModificacion DESC, hp.IDHistorialPrecio DESC;
+END;
+GO
+
+-- ============================================================================
+-- MÓDULO 2.4: IMÁGENES DE VARIANTES (RF-02, RF-09)
+-- ============================================================================
+
+-- ----------------------------------------------------------------------------
+-- 14. SP_Catalogo_AgregarImagenVariante
+-- Agrega una imagen a una variante. Si es la primera imagen activa o se define
+-- @EsPrincipal = 1, desmarca automáticamente las demás imágenes de la variante.
+-- Registra el movimiento en dbo.Bitacora.
+-- ----------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE dbo.SP_Catalogo_AgregarImagenVariante
+    @IDUsuario INT,
+    @IDVariante INT,
+    @UrlImagen NVARCHAR(500),
+    @EsPrincipal BIT = 0,
+    @Orden INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        SET @UrlImagen = LTRIM(RTRIM(@UrlImagen));
+
+        IF @UrlImagen = '' OR @UrlImagen IS NULL
+            THROW 50022, 'La URL de la imagen es obligatoria.', 1;
+
+        IF NOT EXISTS (SELECT 1 FROM dbo.Variantes WHERE IDVariante = @IDVariante)
+            THROW 50019, 'La variante especificada no existe.', 1;
+
+        -- Si no se especifica orden, calcular el siguiente
+        IF @Orden IS NULL OR @Orden < 1
+        BEGIN
+            SELECT @Orden = ISNULL(MAX(Orden), 0) + 1
+            FROM dbo.VarianteImagenes
+            WHERE IDVariante = @IDVariante;
+        END;
+
+        -- Si es la primera imagen activa de la variante, forzar EsPrincipal = 1
+        IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVariante AND Activo = 1)
+        BEGIN
+            SET @EsPrincipal = 1;
+        END
+        ELSE IF @EsPrincipal = 1
+        BEGIN
+            -- Si se marca como principal, desmarcar las existentes
+            UPDATE dbo.VarianteImagenes
+            SET EsPrincipal = 0
+            WHERE IDVariante = @IDVariante
+              AND Activo = 1;
+        END;
+
+        INSERT INTO dbo.VarianteImagenes (
+            IDVariante,
+            UrlImagen,
+            EsPrincipal,
+            Orden,
+            Activo
+        )
+        VALUES (
+            @IDVariante,
+            @UrlImagen,
+            @EsPrincipal,
+            @Orden,
+            1
+        );
+
+        DECLARE @IDVarianteImagenNueva INT = SCOPE_IDENTITY();
+
+        INSERT INTO dbo.Bitacora (
+            IDUsuario,
+            Modulo,
+            Accion,
+            IDRegistroAfectado,
+            ValorAnterior,
+            ValorNuevo
+        )
+        VALUES (
+            @IDUsuario,
+            'VARIANTES_IMAGENES',
+            'CREAR',
+            CAST(@IDVarianteImagenNueva AS VARCHAR(50)),
+            NULL,
+            CONCAT(N'{"IDVariante":', @IDVariante, N',"UrlImagen":"', @UrlImagen, N'","EsPrincipal":', CAST(@EsPrincipal AS INT), N',"Orden":', @Orden, N'}')
+        );
+
+        COMMIT TRANSACTION;
+
+        SELECT
+            vi.IDVarianteImagen,
+            vi.IDVariante,
+            vi.UrlImagen,
+            vi.EsPrincipal,
+            vi.Orden,
+            vi.Activo,
+            vi.FechaCreacion
+        FROM dbo.VarianteImagenes AS vi
+        WHERE vi.IDVarianteImagen = @IDVarianteImagenNueva;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+-- ----------------------------------------------------------------------------
+-- 15. SP_Catalogo_EstablecerImagenPrincipalVariante
+-- Alterna de forma atómica la imagen principal de una variante específica,
+-- desmarcando las demás y auditando el cambio en dbo.Bitacora.
+-- ----------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE dbo.SP_Catalogo_EstablecerImagenPrincipalVariante
+    @IDUsuario INT,
+    @IDVariante INT,
+    @IDVarianteImagen INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        IF NOT EXISTS (
+            SELECT 1 
+            FROM dbo.VarianteImagenes 
+            WHERE IDVarianteImagen = @IDVarianteImagen 
+              AND IDVariante = @IDVariante 
+              AND Activo = 1
+        )
+            THROW 50023, 'La imagen especificada no existe o no pertenece a la variante.', 1;
+
+        -- Desmarcar anteriores
+        UPDATE dbo.VarianteImagenes
+        SET EsPrincipal = 0
+        WHERE IDVariante = @IDVariante
+          AND Activo = 1;
+
+        -- Marcar la seleccionada
+        UPDATE dbo.VarianteImagenes
+        SET EsPrincipal = 1
+        WHERE IDVarianteImagen = @IDVarianteImagen;
+
+        INSERT INTO dbo.Bitacora (
+            IDUsuario,
+            Modulo,
+            Accion,
+            IDRegistroAfectado,
+            ValorAnterior,
+            ValorNuevo
+        )
+        VALUES (
+            @IDUsuario,
+            'VARIANTES_IMAGENES',
+            'MODIFICAR',
+            CAST(@IDVarianteImagen AS VARCHAR(50)),
+            CONCAT(N'{"IDVariante":', @IDVariante, N',"EsPrincipal":0}'),
+            CONCAT(N'{"IDVariante":', @IDVariante, N',"EsPrincipal":1}')
+        );
+
+        COMMIT TRANSACTION;
+
+        SELECT
+            vi.IDVarianteImagen,
+            vi.IDVariante,
+            vi.UrlImagen,
+            vi.EsPrincipal,
+            vi.Orden,
+            vi.Activo
+        FROM dbo.VarianteImagenes AS vi
+        WHERE vi.IDVariante = @IDVariante
+          AND vi.Activo = 1
+        ORDER BY vi.EsPrincipal DESC, vi.Orden ASC;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END;
+GO
+
+-- ----------------------------------------------------------------------------
+-- 16. SP_Catalogo_EliminarImagenVariante
+-- Desactiva lógicamente (Activo = 0) una imagen de variante. Si era la imagen
+-- principal, promueve automáticamente la siguiente imagen activa con menor orden.
+-- Registra la auditoría en dbo.Bitacora.
+-- ----------------------------------------------------------------------------
+CREATE OR ALTER PROCEDURE dbo.SP_Catalogo_EliminarImagenVariante
+    @IDUsuario INT,
+    @IDVariante INT,
+    @IDVarianteImagen INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET XACT_ABORT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @EsPrincipal BIT;
+        DECLARE @UrlImagen NVARCHAR(500);
+
+        SELECT
+            @EsPrincipal = EsPrincipal,
+            @UrlImagen = UrlImagen
+        FROM dbo.VarianteImagenes
+        WHERE IDVarianteImagen = @IDVarianteImagen
+          AND IDVariante = @IDVariante
+          AND Activo = 1;
+
+        IF @UrlImagen IS NULL
+            THROW 50024, 'La imagen especificada no existe o ya se encuentra inactiva.', 1;
+
+        -- Soft delete
+        UPDATE dbo.VarianteImagenes
+        SET Activo = 0,
+            EsPrincipal = 0
+        WHERE IDVarianteImagen = @IDVarianteImagen;
+
+        -- Si era la principal, promover la siguiente con menor orden como principal
+        IF @EsPrincipal = 1
+        BEGIN
+            DECLARE @SiguientePrincipal INT;
+
+            SELECT TOP (1) @SiguientePrincipal = IDVarianteImagen
+            FROM dbo.VarianteImagenes
+            WHERE IDVariante = @IDVariante
+              AND Activo = 1
+            ORDER BY Orden ASC, IDVarianteImagen ASC;
+
+            IF @SiguientePrincipal IS NOT NULL
+            BEGIN
+                UPDATE dbo.VarianteImagenes
+                SET EsPrincipal = 1
+                WHERE IDVarianteImagen = @SiguientePrincipal;
+            END;
+        END;
+
+        INSERT INTO dbo.Bitacora (
+            IDUsuario,
+            Modulo,
+            Accion,
+            IDRegistroAfectado,
+            ValorAnterior,
+            ValorNuevo
+        )
+        VALUES (
+            @IDUsuario,
+            'VARIANTES_IMAGENES',
+            'DESACTIVAR',
+            CAST(@IDVarianteImagen AS VARCHAR(50)),
+            CONCAT(N'{"IDVariante":', @IDVariante, N',"UrlImagen":"', @UrlImagen, N'","Activo":1}'),
+            CONCAT(N'{"IDVariante":', @IDVariante, N',"UrlImagen":"', @UrlImagen, N'","Activo":0}')
+        );
+
+        COMMIT TRANSACTION;
+
+        -- Retornar imágenes activas restantes
+        SELECT
+            vi.IDVarianteImagen,
+            vi.IDVariante,
+            vi.UrlImagen,
+            vi.EsPrincipal,
+            vi.Orden,
+            vi.Activo
+        FROM dbo.VarianteImagenes AS vi
+        WHERE vi.IDVariante = @IDVariante
+          AND vi.Activo = 1
+        ORDER BY vi.EsPrincipal DESC, vi.Orden ASC;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
 END;
 GO

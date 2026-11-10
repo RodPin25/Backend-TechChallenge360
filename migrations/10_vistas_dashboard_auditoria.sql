@@ -492,7 +492,7 @@ BEGIN
     IF @FechaInicio IS NULL SET @FechaInicio = DATEADD(DAY, -90, SYSDATETIME());
     IF @FechaFin IS NULL SET @FechaFin = SYSDATETIME();
 
-    WITH VentasCat AS (
+    ;WITH VentasCat AS (
         SELECT
             c.IDCategoria,
             c.NombreCategoria,

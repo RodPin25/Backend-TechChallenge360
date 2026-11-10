@@ -531,13 +531,13 @@ export const openApiSpec = {
     '/catalog/products/{idProducto}': {
       get: {
         tags: ['Catalog'],
-        summary: 'Obtener detalle de producto con variantes y atributos (SP_Catalogo_ObtenerDetalleProducto)',
+        summary: 'Obtener detalle de producto con variantes, atributos y galería de imágenes (SP_Catalogo_ObtenerDetalleProducto)',
         parameters: [
           { in: 'path', name: 'idProducto', required: true, schema: { type: 'integer' } },
           { in: 'query', name: 'incluirInactivos', schema: { type: 'boolean', default: false } },
         ],
         responses: {
-          '200': { description: 'Producto, variantes con StockDisponible y atributos' },
+          '200': { description: 'Producto, variantes con StockDisponible, atributos y galería de imágenes' },
           '404': { description: 'Producto no encontrado' },
         },
       },
@@ -695,6 +695,104 @@ export const openApiSpec = {
         ],
         responses: {
           '200': { description: 'Atributo desactivado exitosamente (eliminación lógica)' },
+        },
+      },
+    },
+    '/catalog/variants/{idVariante}/images/upload': {
+      post: {
+        tags: ['Catalog'],
+        summary: 'Subir archivo de imagen física local para una variante (multipart/form-data - SP_Catalogo_AgregarImagenVariante)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'idVariante', required: true, schema: { type: 'integer' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: {
+                    type: 'string',
+                    format: 'binary',
+                    description: 'Archivo de imagen en formato JPEG, PNG o WebP (máx. 5 MB)',
+                  },
+                  esPrincipal: {
+                    type: 'boolean',
+                    default: false,
+                    description: 'Indica si esta imagen debe ser la portada principal de la variante',
+                  },
+                  orden: {
+                    type: 'integer',
+                    description: 'Posición ordinal en el carrusel/galería',
+                  },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Imagen subida al disco local y asociada exitosamente a la variante' },
+          '400': { description: 'Archivo inválido o tamaño excedido' },
+        },
+      },
+    },
+    '/catalog/variants/{idVariante}/images': {
+      post: {
+        tags: ['Catalog'],
+        summary: 'Asociar imagen por URL directa a una variante (SP_Catalogo_AgregarImagenVariante)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'idVariante', required: true, schema: { type: 'integer' } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['urlImagen'],
+                properties: {
+                  urlImagen: { type: 'string', example: 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600' },
+                  esPrincipal: { type: 'boolean', default: false },
+                  orden: { type: 'integer', example: 1 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Imagen asociada a la variante' },
+        },
+      },
+    },
+    '/catalog/variants/{idVariante}/images/{idVarianteImagen}/primary': {
+      patch: {
+        tags: ['Catalog'],
+        summary: 'Establecer imagen como principal de la variante (SP_Catalogo_EstablecerImagenPrincipalVariante)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'idVariante', required: true, schema: { type: 'integer' } },
+          { in: 'path', name: 'idVarianteImagen', required: true, schema: { type: 'integer' } },
+        ],
+        responses: {
+          '200': { description: 'Imagen establecida como principal de la variante' },
+        },
+      },
+    },
+    '/catalog/variants/{idVariante}/images/{idVarianteImagen}': {
+      delete: {
+        tags: ['Catalog'],
+        summary: 'Desactivar imagen de variante (borrado lógico - SP_Catalogo_EliminarImagenVariante)',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { in: 'path', name: 'idVariante', required: true, schema: { type: 'integer' } },
+          { in: 'path', name: 'idVarianteImagen', required: true, schema: { type: 'integer' } },
+        ],
+        responses: {
+          '200': { description: 'Imagen de variante desactivada exitosamente' },
         },
       },
     },

@@ -309,10 +309,6 @@ BEGIN
 
         -- 3. Liberar reservas expiradas de la variante antes de validar disponibilidad
         UPDATE dbo.ReservasExistencia
-        SET Estado = 'ACTIVA' -- No-op placeholder evitado: liberar directamente las expiradas
-        WHERE 1 = 0;
-
-        UPDATE dbo.ReservasExistencia
         SET Estado = 'LIBERADA'
         WHERE IDVariante = @IDVariante
           AND Estado = 'ACTIVA'
