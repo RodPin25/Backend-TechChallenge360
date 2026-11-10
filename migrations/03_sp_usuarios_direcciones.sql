@@ -35,10 +35,10 @@ BEGIN
         SET @NombreCompleto = LTRIM(RTRIM(@NombreCompleto));
 
         IF @Correo = '' OR @NombreCompleto = '' OR ISNULL(@PasswordHash, '') = ''
-            ;THROW 50001, 'El correo, nombre completo y contraseña son obligatorios.', 1;
+            THROW 50001, 'El correo, nombre completo y contraseña son obligatorios.', 1;
 
         IF EXISTS (SELECT 1 FROM dbo.Usuarios WHERE Correo = @Correo)
-            ;THROW 50002, 'El correo electrónico ya se encuentra registrado.', 1;
+            THROW 50002, 'El correo electrónico ya se encuentra registrado.', 1;
 
         DECLARE @IDRolCliente INT;
         SELECT @IDRolCliente = IDRol
@@ -46,7 +46,7 @@ BEGIN
         WHERE NombreRol = 'Cliente';
 
         IF @IDRolCliente IS NULL
-            ;THROW 50003, 'El rol de Cliente no está configurado en el sistema.', 1;
+            THROW 50003, 'El rol de Cliente no está configurado en el sistema.', 1;
 
         INSERT INTO dbo.Usuarios (
             IDRol,
@@ -150,7 +150,7 @@ BEGIN
     SET NOCOUNT ON;
 
     IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario)
-        ;THROW 50004, 'El usuario solicitado no existe.', 1;
+        THROW 50004, 'El usuario solicitado no existe.', 1;
 
     -- Recordset 1: Datos del perfil
     SELECT
@@ -213,14 +213,14 @@ BEGIN
         WHERE IDUsuario = @IDUsuario;
 
         IF @NombreAnterior IS NULL
-            ;THROW 50004, 'El usuario solicitado no existe.', 1;
+            THROW 50004, 'El usuario solicitado no existe.', 1;
 
         IF @Activo = 0
-            ;THROW 50005, 'La cuenta de usuario se encuentra desactivada.', 1;
+            THROW 50005, 'La cuenta de usuario se encuentra desactivada.', 1;
 
         SET @NombreCompleto = LTRIM(RTRIM(@NombreCompleto));
         IF @NombreCompleto = ''
-            ;THROW 50001, 'El nombre completo no puede estar vacío.', 1;
+            THROW 50001, 'El nombre completo no puede estar vacío.', 1;
 
         UPDATE dbo.Usuarios
         SET NombreCompleto = @NombreCompleto,
@@ -292,10 +292,10 @@ BEGIN
         SET @NombreCompleto = LTRIM(RTRIM(@NombreCompleto));
 
         IF @Correo = '' OR @NombreCompleto = '' OR ISNULL(@PasswordHash, '') = ''
-            ;THROW 50001, 'El correo, nombre completo y contraseña son obligatorios.', 1;
+            THROW 50001, 'El correo, nombre completo y contraseña son obligatorios.', 1;
 
         IF EXISTS (SELECT 1 FROM dbo.Usuarios WHERE Correo = @Correo)
-            ;THROW 50002, 'El correo electrónico ya se encuentra registrado.', 1;
+            THROW 50002, 'El correo electrónico ya se encuentra registrado.', 1;
 
         DECLARE @NombreRol VARCHAR(30);
         SELECT @NombreRol = NombreRol
@@ -303,7 +303,7 @@ BEGIN
         WHERE IDRol = @IDRol;
 
         IF @NombreRol IS NULL
-            ;THROW 50003, 'El rol especificado no existe.', 1;
+            THROW 50003, 'El rol especificado no existe.', 1;
 
         INSERT INTO dbo.Usuarios (
             IDRol,
@@ -385,7 +385,7 @@ BEGIN
         BEGIN TRANSACTION;
 
         IF @IDUsuarioAdmin = @IDUsuarioObjetivo AND @Activo = 0
-            ;THROW 50006, 'Un administrador no puede desactivar su propia cuenta.', 1;
+            THROW 50006, 'Un administrador no puede desactivar su propia cuenta.', 1;
 
         DECLARE @ActivoAnterior BIT;
         DECLARE @IDRolAnterior INT;
@@ -399,10 +399,10 @@ BEGIN
         WHERE IDUsuario = @IDUsuarioObjetivo;
 
         IF @CorreoObjetivo IS NULL
-            ;THROW 50004, 'El usuario objetivo no existe.', 1;
+            THROW 50004, 'El usuario objetivo no existe.', 1;
 
         IF @IDRol IS NOT NULL AND NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE IDRol = @IDRol)
-            ;THROW 50003, 'El rol especificado no existe.', 1;
+            THROW 50003, 'El rol especificado no existe.', 1;
 
         DECLARE @IDRolFinal INT = ISNULL(@IDRol, @IDRolAnterior);
 
@@ -551,14 +551,14 @@ BEGIN
         BEGIN TRANSACTION;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario AND Activo = 1)
-            ;THROW 50004, 'El usuario no existe o se encuentra inactivo.', 1;
+            THROW 50004, 'El usuario no existe o se encuentra inactivo.', 1;
 
         SET @DireccionLinea = LTRIM(RTRIM(@DireccionLinea));
         SET @Municipio = LTRIM(RTRIM(@Municipio));
         SET @Departamento = LTRIM(RTRIM(@Departamento));
 
         IF @DireccionLinea = '' OR @Municipio = '' OR @Departamento = ''
-            ;THROW 50007, 'La dirección, municipio y departamento son obligatorios.', 1;
+            THROW 50007, 'La dirección, municipio y departamento son obligatorios.', 1;
 
         -- Si el cliente no tiene ninguna dirección activa, esta será la principal automáticamente
         IF NOT EXISTS (SELECT 1 FROM dbo.Direcciones WHERE IDUsuario = @IDUsuario AND Activo = 1)
@@ -678,14 +678,14 @@ BEGIN
           AND Activo = 1;
 
         IF @EsPrincipalActual IS NULL
-            ;THROW 50008, 'La dirección no existe o no pertenece al usuario autenticado.', 1;
+            THROW 50008, 'La dirección no existe o no pertenece al usuario autenticado.', 1;
 
         SET @DireccionLinea = LTRIM(RTRIM(@DireccionLinea));
         SET @Municipio = LTRIM(RTRIM(@Municipio));
         SET @Departamento = LTRIM(RTRIM(@Departamento));
 
         IF @DireccionLinea = '' OR @Municipio = '' OR @Departamento = ''
-            ;THROW 50007, 'La dirección, municipio y departamento son obligatorios.', 1;
+            THROW 50007, 'La dirección, municipio y departamento son obligatorios.', 1;
 
         DECLARE @NuevoEsPrincipal BIT = ISNULL(@EsPrincipal, @EsPrincipalActual);
 
@@ -753,7 +753,7 @@ BEGIN
               AND IDUsuario = @IDUsuario
               AND Activo = 1
         )
-            ;THROW 50008, 'La dirección no existe o no pertenece al usuario autenticado.', 1;
+            THROW 50008, 'La dirección no existe o no pertenece al usuario autenticado.', 1;
 
         UPDATE dbo.Direcciones
         SET EsPrincipal = CASE WHEN IDDireccion = @IDDireccion THEN 1 ELSE 0 END
@@ -808,7 +808,7 @@ BEGIN
           AND Activo = 1;
 
         IF @EraPrincipal IS NULL
-            ;THROW 50008, 'La dirección no existe o no pertenece al usuario autenticado.', 1;
+            THROW 50008, 'La dirección no existe o no pertenece al usuario autenticado.', 1;
 
         UPDATE dbo.Direcciones
         SET Activo = 0,

@@ -37,7 +37,7 @@ BEGIN
       AND u.Activo = 1;
 
     IF @RolSolicitante IS NULL
-        ;THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
+        THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
 
     DECLARE @IDClientePedido INT;
     SELECT @IDClientePedido = p.IDUsuario
@@ -46,10 +46,10 @@ BEGIN
     WHERE d.IDDevolucion = @IDDevolucion;
 
     IF @IDClientePedido IS NULL
-        ;THROW 50080, 'La solicitud de devolución especificada no existe.', 1;
+        THROW 50080, 'La solicitud de devolución especificada no existe.', 1;
 
     IF @RolSolicitante = 'Cliente' AND @IDClientePedido <> @IDUsuarioSolicitante
-        ;THROW 50081, 'No tiene permisos para consultar una devolución de otro cliente.', 1;
+        THROW 50081, 'No tiene permisos para consultar una devolución de otro cliente.', 1;
 
     -- Recordset 1: Encabezado de la devolución y monto neto asociado
     SELECT
@@ -148,10 +148,10 @@ BEGIN
 
         SET @Motivo = LTRIM(RTRIM(@Motivo));
         IF ISNULL(@Motivo, '') = ''
-            ;THROW 50082, 'El motivo de la devolución es obligatorio.', 1;
+            THROW 50082, 'El motivo de la devolución es obligatorio.', 1;
 
         IF ISNULL(LTRIM(RTRIM(@ItemsJSON)), '') = '' OR ISJSON(@ItemsJSON) = 0
-            ;THROW 50083, 'El detalle de productos a devolver (@ItemsJSON) debe ser un arreglo JSON válido.', 1;
+            THROW 50083, 'El detalle de productos a devolver (@ItemsJSON) debe ser un arreglo JSON válido.', 1;
 
         DECLARE @RolUsuario VARCHAR(30);
         SELECT @RolUsuario = r.NombreRol
@@ -161,7 +161,7 @@ BEGIN
           AND u.Activo = 1;
 
         IF @RolUsuario IS NULL
-            ;THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
+            THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
 
         -- Bloquear el pedido para evitar solicitudes concurrentes que excedan el saldo
         DECLARE @IDClientePedido INT;
@@ -174,15 +174,15 @@ BEGIN
         WHERE IDPedido = @IDPedido;
 
         IF @IDClientePedido IS NULL
-            ;THROW 50070, 'El pedido especificado no existe.', 1;
+            THROW 50070, 'El pedido especificado no existe.', 1;
 
         -- Control de acceso por rol (RF-01): un Cliente solo puede devolver sus propios pedidos
         IF @RolUsuario = 'Cliente' AND @IDClientePedido <> @IDUsuario
-            ;THROW 50071, 'No tiene permisos para solicitar devoluciones sobre el pedido de otro cliente.', 1;
+            THROW 50071, 'No tiene permisos para solicitar devoluciones sobre el pedido de otro cliente.', 1;
 
         -- Solo pedidos entregados pueden devolverse (antes de entrega se utiliza cancelación)
         IF @EstadoPedido <> 'ENTREGADO'
-            ;THROW 50084, 'Únicamente se pueden solicitar devoluciones sobre pedidos en estado ENTREGADO.', 1;
+            THROW 50084, 'Únicamente se pueden solicitar devoluciones sobre pedidos en estado ENTREGADO.', 1;
 
         -- Extraer y agrupar los ítems del JSON
         CREATE TABLE #ItemsDevolucion (
@@ -203,10 +203,10 @@ BEGIN
         GROUP BY IDVariante;
 
         IF NOT EXISTS (SELECT 1 FROM #ItemsDevolucion)
-            ;THROW 50085, 'Debe incluir al menos una línea de producto para devolver.', 1;
+            THROW 50085, 'Debe incluir al menos una línea de producto para devolver.', 1;
 
         IF EXISTS (SELECT 1 FROM #ItemsDevolucion WHERE CantidadSolicitada <= 0)
-            ;THROW 50086, 'La cantidad a devolver de cada línea debe ser mayor a cero.', 1;
+            THROW 50086, 'La cantidad a devolver de cada línea debe ser mayor a cero.', 1;
 
         -- Validar que todas las variantes enviadas pertenezcan al pedido
         IF EXISTS (
@@ -219,7 +219,7 @@ BEGIN
                   AND pd.IDVariante = i.IDVariante
             )
         )
-            ;THROW 50087, 'Una o más variantes indicadas en la devolución no forman parte del pedido original.', 1;
+            THROW 50087, 'Una o más variantes indicadas en la devolución no forman parte del pedido original.', 1;
 
         -- Validar contra dbo.FU_Pedidos_SaldoDevolucionLinea que ninguna línea supere lo disponible (RF-07)
         DECLARE @SKUExcedido VARCHAR(50);
@@ -244,7 +244,7 @@ BEGIN
                 N'" (SKU: ', @SKUExcedido, N'). Solicitado: ', @CantSolicitadaExcedida,
                 N', Disponible para devolver: ', @CantDisponibleExcedida, N'.'
             );
-            ;THROW 50088, @MensajeExceso, 1;
+            THROW 50088, @MensajeExceso, 1;
         END
 
         -- Insertar encabezado en dbo.Devoluciones
@@ -340,7 +340,7 @@ BEGIN
         SET @Observacion = NULLIF(LTRIM(RTRIM(@Observacion)), '');
 
         IF @NuevoEstado NOT IN ('APROBADA', 'RECHAZADA')
-            ;THROW 50089, 'El estado de resolución de la devolución debe ser APROBADA o RECHAZADA.', 1;
+            THROW 50089, 'El estado de resolución de la devolución debe ser APROBADA o RECHAZADA.', 1;
 
         DECLARE @RolResolutor VARCHAR(30);
         SELECT @RolResolutor = r.NombreRol
@@ -350,7 +350,7 @@ BEGIN
           AND u.Activo = 1;
 
         IF @RolResolutor IS NULL OR @RolResolutor NOT IN ('Operador', 'Administrador')
-            ;THROW 50090, 'Solo un Operador o Administrador activo puede aprobar o rechazar devoluciones.', 1;
+            THROW 50090, 'Solo un Operador o Administrador activo puede aprobar o rechazar devoluciones.', 1;
 
         -- Bloquear la devolución para evitar doble resolución concurrente
         DECLARE @IDPedido INT;
@@ -365,10 +365,10 @@ BEGIN
         WHERE IDDevolucion = @IDDevolucion;
 
         IF @IDPedido IS NULL
-            ;THROW 50080, 'La solicitud de devolución especificada no existe.', 1;
+            THROW 50080, 'La solicitud de devolución especificada no existe.', 1;
 
         IF @EstadoActual <> 'SOLICITADA'
-            ;THROW 50091, 'Esta solicitud de devolución ya fue procesada anteriormente.', 1;
+            THROW 50091, 'Esta solicitud de devolución ya fue procesada anteriormente.', 1;
 
         -- Si se aprueba, reintegrar existencias a dbo.Variantes y registrar 'DEVOLUCION' en dbo.Kardex
         IF @NuevoEstado = 'APROBADA'
@@ -508,7 +508,7 @@ BEGIN
       AND u.Activo = 1;
 
     IF @RolSolicitante IS NULL
-        ;THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
+        THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
 
     IF @RolSolicitante = 'Cliente'
         SET @IDClienteFiltro = @IDUsuarioSolicitante;

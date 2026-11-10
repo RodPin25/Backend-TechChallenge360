@@ -1,5 +1,6 @@
 // src/app.ts
 import express, { type Application, type Request, type Response } from 'express';
+import path from 'path';
 import helmet from 'helmet';
 import cors from 'cors';
 import { swaggerRouter } from './config/swagger';
@@ -15,10 +16,17 @@ import { notFoundHandler, errorHandler } from './middlewares/errorHandler';
 const app: Application = express();
 
 // Configuraciones de seguridad y middlewares globales
-app.use(helmet());
+app.use(
+  helmet({
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }),
+);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Servidor de archivos estáticos para imágenes de productos/variantes
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Documentación interactiva OpenAPI / Swagger UI (/api/docs y /api/docs.json)
 app.use('/api', swaggerRouter);

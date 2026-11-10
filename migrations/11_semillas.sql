@@ -216,6 +216,60 @@ BEGIN TRY
         INSERT INTO dbo.VarianteAtributos (IDVariante, Clave, Valor) VALUES (@IDVarSudM, 'Color', 'Gris Oxford');
 
     -- -------------------------------------------------------------------------
+    -- 7.1. IMÁGENES DE VARIANTES (RF-02)
+    -- -------------------------------------------------------------------------
+    DECLARE @IDVarSudS INT = (SELECT IDVariante FROM dbo.Variantes WHERE SKU = 'SUD-DF-S-GRY');
+    DECLARE @IDVarSudL INT = (SELECT IDVariante FROM dbo.Variantes WHERE SKU = 'SUD-DF-L-BLK');
+    DECLARE @IDVarCafetera INT = (SELECT IDVariante FROM dbo.Variantes WHERE SKU = 'CFTR-BARISTA-SS');
+    DECLARE @IDVarWatchBlk INT = (SELECT IDVariante FROM dbo.Variantes WHERE SKU = 'FITPULSE-44-BLK');
+    DECLARE @IDVarWatchBlu INT = (SELECT IDVariante FROM dbo.Variantes WHERE SKU = 'FITPULSE-44-BLU');
+
+    -- Smartphone Aurora X (Negro Cósmico y Plata)
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarAurora1)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarAurora1, 'https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarAurora2)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarAurora2, 'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    -- Auriculares SoundPro (Negro Mate y Blanco Glaciar)
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarSoundPro1)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarSoundPro1, 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarSoundPro2)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarSoundPro2, 'https://images.unsplash.com/photo-1572536147248-ac59a8abfa4b?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    -- Sudadera DryFit (Gris y Negra)
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarSudS)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarSudS, 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarSudM)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarSudM, 'https://images.unsplash.com/photo-1556905055-8f358a7a47b2?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarSudL)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarSudL, 'https://images.unsplash.com/photo-1578587018452-892bacefd3f2?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    -- Cafetera Barista Pro (Acero Inoxidable)
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarCafetera)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarCafetera, 'https://images.unsplash.com/photo-1517668808822-9ebb02f2a0e6?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    -- Smartwatch FitPulse (Negro y Azul)
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarWatchBlk)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarWatchBlk, 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    IF NOT EXISTS (SELECT 1 FROM dbo.VarianteImagenes WHERE IDVariante = @IDVarWatchBlu)
+        INSERT INTO dbo.VarianteImagenes (IDVariante, UrlImagen, EsPrincipal, Orden, Activo)
+        VALUES (@IDVarWatchBlu, 'https://images.unsplash.com/photo-1508685096489-7aacd43bd3b1?w=600&auto=format&fit=crop', 1, 1, 1);
+
+    -- -------------------------------------------------------------------------
     -- 8. ASENTAMIENTO INICIAL EN KARDEX (RF-03)
     -- Regla: Toda existencia física inicial debe tener trazabilidad de entrada
     -- -------------------------------------------------------------------------

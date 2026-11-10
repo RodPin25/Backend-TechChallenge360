@@ -30,6 +30,7 @@ export interface ProductListItemRecord extends ProductMasterRecord {
   StockFisicoTotal: number;
   StockDisponibleTotal: number;
   TieneDisponibilidad: boolean;
+  ImagenPortada?: string | null;
 }
 
 export interface VariantAttributeRecord {
@@ -37,6 +38,17 @@ export interface VariantAttributeRecord {
   IDVariante: number;
   Clave: string;
   Valor: string;
+  Activo: boolean;
+}
+
+export interface VariantImageRecord {
+  IDVarianteImagen: number;
+  IDVariante: number;
+  UrlImagen: string;
+  EsPrincipal: boolean;
+  Orden: number;
+  Activo: boolean;
+  FechaCreacion?: Date;
 }
 
 export interface VariantRecord {
@@ -51,7 +63,9 @@ export interface VariantRecord {
   StockReservado: number;
   StockDisponible: number;
   Activo: boolean;
+  ImagenPrincipal?: string | null;
   atributos?: VariantAttributeRecord[];
+  imagenes?: VariantImageRecord[];
 }
 
 export interface ProductDetailResult {
@@ -313,7 +327,7 @@ export class CatalogRepository {
 
   /**
    * 8. dbo.SP_Catalogo_ObtenerDetalleProducto
-   * Devuelve 3 recordsets: Producto, Variantes y Atributos de cada variante.
+   * Devuelve 4 recordsets: Producto, Variantes, Atributos de cada variante y Galería de Imágenes.
    */
   public async obtenerDetalleProducto(
     idProducto: number,
@@ -331,6 +345,7 @@ export class CatalogRepository {
         ProductMasterRecord[],
         VariantRecord[],
         VariantAttributeRecord[],
+        VariantImageRecord[],
       ];
 
       const producto = recordsets[0]?.[0];
@@ -340,6 +355,7 @@ export class CatalogRepository {
 
       const rawVariantes = recordsets[1] ?? [];
       const rawAtributos = recordsets[2] ?? [];
+      const rawImagenes = recordsets[3] ?? [];
 
       // Agrupar atributos por IDVariante para entregar una estructura jerárquica limpia
       const atributosPorVariante = new Map<number, VariantAttributeRecord[]>();
@@ -349,9 +365,18 @@ export class CatalogRepository {
         atributosPorVariante.set(attr.IDVariante, list);
       }
 
+      // Agrupar imágenes por IDVariante para la galería completa
+      const imagenesPorVariante = new Map<number, VariantImageRecord[]>();
+      for (const img of rawImagenes) {
+        const list = imagenesPorVariante.get(img.IDVariante) ?? [];
+        list.push(img);
+        imagenesPorVariante.set(img.IDVariante, list);
+      }
+
       const variantes: VariantRecord[] = rawVariantes.map((v) => ({
         ...v,
         atributos: atributosPorVariante.get(v.IDVariante) ?? [],
+        imagenes: imagenesPorVariante.get(v.IDVariante) ?? [],
       }));
 
       return {
@@ -504,6 +529,93 @@ export class CatalogRepository {
 
       const result = await request.execute<PriceHistoryRecord>(
         'dbo.SP_Catalogo_ObtenerHistorialPrecios',
+      );
+
+      return result.recordset ?? [];
+    } catch (error) {
+      throw mapSqlError(error);
+    }
+  }
+
+  /**
+   * 14. dbo.SP_Catalogo_AgregarImagenVariante
+   */
+  public async agregarImagenVariante(params: {
+    idUsuario: number;
+    idVariante: number;
+    urlImagen: string;
+    esPrincipal?: boolean;
+    orden?: number;
+  }): Promise<VariantImageRecord> {
+    try {
+      const pool = getPool();
+      const request = pool.request();
+
+      request.input('IDUsuario', sql.Int, params.idUsuario);
+      request.input('IDVariante', sql.Int, params.idVariante);
+      request.input('UrlImagen', sql.NVarChar(500), params.urlImagen);
+      request.input('EsPrincipal', sql.Bit, params.esPrincipal ?? false);
+      request.input('Orden', sql.Int, params.orden ?? null);
+
+      const result = await request.execute<VariantImageRecord>(
+        'dbo.SP_Catalogo_AgregarImagenVariante',
+      );
+      const record = result.recordset?.[0];
+
+      if (!record) {
+        throw new Error('No se recibió la imagen de variante creada.');
+      }
+
+      return record;
+    } catch (error) {
+      throw mapSqlError(error);
+    }
+  }
+
+  /**
+   * 15. dbo.SP_Catalogo_EstablecerImagenPrincipalVariante
+   */
+  public async establecerImagenPrincipalVariante(params: {
+    idUsuario: number;
+    idVariante: number;
+    idVarianteImagen: number;
+  }): Promise<VariantImageRecord[]> {
+    try {
+      const pool = getPool();
+      const request = pool.request();
+
+      request.input('IDUsuario', sql.Int, params.idUsuario);
+      request.input('IDVariante', sql.Int, params.idVariante);
+      request.input('IDVarianteImagen', sql.Int, params.idVarianteImagen);
+
+      const result = await request.execute<VariantImageRecord>(
+        'dbo.SP_Catalogo_EstablecerImagenPrincipalVariante',
+      );
+
+      return result.recordset ?? [];
+    } catch (error) {
+      throw mapSqlError(error);
+    }
+  }
+
+  /**
+   * 16. dbo.SP_Catalogo_EliminarImagenVariante
+   */
+  public async eliminarImagenVariante(params: {
+    idUsuario: number;
+    idVariante: number;
+    idVarianteImagen: number;
+  }): Promise<VariantImageRecord[]> {
+    try {
+      const pool = getPool();
+      const request = pool.request();
+
+      request.input('IDUsuario', sql.Int, params.idUsuario);
+      request.input('IDVariante', sql.Int, params.idVariante);
+      request.input('IDVarianteImagen', sql.Int, params.idVarianteImagen);
+
+      const result = await request.execute<VariantImageRecord>(
+        'dbo.SP_Catalogo_EliminarImagenVariante',
       );
 
       return result.recordset ?? [];

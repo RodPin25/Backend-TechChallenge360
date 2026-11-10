@@ -22,7 +22,7 @@ INSTEAD OF UPDATE, DELETE
 AS
 BEGIN
     SET NOCOUNT ON;
-    ;THROW 50095, 'La bitácora de auditoría es estrictamente inmutable: no se permite modificar ni eliminar registros.', 1;
+    THROW 50095, 'La bitácora de auditoría es estrictamente inmutable: no se permite modificar ni eliminar registros.', 1;
 END;
 GO
 
@@ -162,21 +162,31 @@ GO
 -- ----------------------------------------------------------------------------
 CREATE OR ALTER VIEW dbo.VW_Dashboard_VentasPorCategoria
 AS
+WITH ResumenPorCategoria AS (
+    SELECT
+        c.IDCategoria,
+        c.NombreCategoria,
+        COUNT(DISTINCT l.IDPedido) AS NumeroPedidos,
+        ISNULL(SUM(l.CantidadNeta), 0) AS UnidadesNetasVendidas,
+        CAST(ISNULL(SUM(l.MontoDevueltoLinea), 0.00) AS DECIMAL(12,2)) AS MontoDevolucionesGTQ,
+        CAST(ISNULL(SUM(l.VentaNetaLinea), 0.00) AS DECIMAL(12,2)) AS VentaNetaGTQ
+    FROM dbo.Categorias AS c
+    LEFT JOIN dbo.VW_Pedidos_LineasNetasCompletadas AS l ON l.IDCategoria = c.IDCategoria
+    GROUP BY
+        c.IDCategoria,
+        c.NombreCategoria
+)
 SELECT
-    c.IDCategoria,
-    c.NombreCategoria,
-    COUNT(DISTINCT l.IDPedido) AS NumeroPedidos,
-    ISNULL(SUM(l.CantidadNeta), 0) AS UnidadesNetasVendidas,
-    CAST(ISNULL(SUM(l.MontoDevueltoLinea), 0.00) AS DECIMAL(12,2)) AS MontoDevolucionesGTQ,
-    CAST(ISNULL(SUM(l.VentaNetaLinea), 0.00) AS DECIMAL(12,2)) AS VentaNetaGTQ,
+    r.IDCategoria,
+    r.NombreCategoria,
+    r.NumeroPedidos,
+    r.UnidadesNetasVendidas,
+    r.MontoDevolucionesGTQ,
+    r.VentaNetaGTQ,
     iva.MontoSinIVA AS VentaNetaSinIVAGTQ,
     iva.MontoIVA AS MontoIVANetoGTQ
-FROM dbo.Categorias AS c
-LEFT JOIN dbo.VW_Pedidos_LineasNetasCompletadas AS l ON l.IDCategoria = c.IDCategoria
-CROSS APPLY dbo.FU_Finanzas_DesgloseIVA(CAST(ISNULL(SUM(l.VentaNetaLinea), 0.00) AS DECIMAL(12,2))) AS iva
-GROUP BY
-    c.IDCategoria,
-    c.NombreCategoria;
+FROM ResumenPorCategoria AS r
+CROSS APPLY dbo.FU_Finanzas_DesgloseIVA(r.VentaNetaGTQ) AS iva;
 GO
 
 -- ----------------------------------------------------------------------------
@@ -482,7 +492,7 @@ BEGIN
     IF @FechaInicio IS NULL SET @FechaInicio = DATEADD(DAY, -90, SYSDATETIME());
     IF @FechaFin IS NULL SET @FechaFin = SYSDATETIME();
 
-    WITH VentasCat AS (
+    ;WITH VentasCat AS (
         SELECT
             c.IDCategoria,
             c.NombreCategoria,

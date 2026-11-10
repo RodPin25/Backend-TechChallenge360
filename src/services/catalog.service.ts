@@ -8,10 +8,12 @@ import {
   type ProductListItemRecord,
   type ProductMasterRecord,
   type VariantAttributeRecord,
+  type VariantImageRecord,
   type VariantRecord,
 } from '../repositories/catalog.repository';
 import type { PaginatedResult } from '../core/types';
 import type {
+  AddVariantImageInput,
   CreateCategoryInput,
   CreateProductInput,
   CreateVariantInput,
@@ -236,6 +238,57 @@ export class CatalogService {
       idVariante: query.idVariante,
       idProducto: query.idProducto,
     });
+  }
+
+  // ==========================================================================
+  // 4. IMÁGENES DE VARIANTES
+  // ==========================================================================
+
+  public async addVariantImage(
+    idUsuario: number,
+    idVariante: number,
+    input: AddVariantImageInput,
+  ): Promise<VariantImageRecord> {
+    const imagen = await catalogRepository.agregarImagenVariante({
+      idUsuario,
+      idVariante,
+      urlImagen: input.urlImagen,
+      esPrincipal: input.esPrincipal,
+      orden: input.orden,
+    });
+
+    await this.invalidateCatalogCache();
+    return imagen;
+  }
+
+  public async setPrimaryVariantImage(
+    idUsuario: number,
+    idVariante: number,
+    idVarianteImagen: number,
+  ): Promise<VariantImageRecord[]> {
+    const imagenes = await catalogRepository.establecerImagenPrincipalVariante({
+      idUsuario,
+      idVariante,
+      idVarianteImagen,
+    });
+
+    await this.invalidateCatalogCache();
+    return imagenes;
+  }
+
+  public async deleteVariantImage(
+    idUsuario: number,
+    idVariante: number,
+    idVarianteImagen: number,
+  ): Promise<VariantImageRecord[]> {
+    const imagenes = await catalogRepository.eliminarImagenVariante({
+      idUsuario,
+      idVariante,
+      idVarianteImagen,
+    });
+
+    await this.invalidateCatalogCache();
+    return imagenes;
   }
 }
 

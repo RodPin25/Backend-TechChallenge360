@@ -42,7 +42,7 @@ BEGIN
       AND u.Activo = 1;
 
     IF @RolSolicitante IS NULL
-        ;THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
+        THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
 
     DECLARE @IDPropietarioPedido INT;
     SELECT @IDPropietarioPedido = IDUsuario
@@ -50,11 +50,11 @@ BEGIN
     WHERE IDPedido = @IDPedido;
 
     IF @IDPropietarioPedido IS NULL
-        ;THROW 50070, 'El pedido solicitado no existe.', 1;
+        THROW 50070, 'El pedido solicitado no existe.', 1;
 
     -- Prevención de IDOR (RF-01): un Cliente jamás puede consultar pedidos de otro cliente
     IF @RolSolicitante = 'Cliente' AND @IDPropietarioPedido <> @IDUsuarioSolicitante
-        ;THROW 50071, 'No tiene permisos para consultar un pedido que pertenece a otro cliente.', 1;
+        THROW 50071, 'No tiene permisos para consultar un pedido que pertenece a otro cliente.', 1;
 
     -- Recordset 1: Encabezado del pedido
     SELECT
@@ -172,7 +172,7 @@ BEGIN
     SET @MetodoPago = ISNULL(NULLIF(LTRIM(RTRIM(UPPER(@MetodoPago))), ''), 'TARJETA');
 
     IF ISNULL(@IdempotencyKey, '') = ''
-        ;THROW 50072, 'La llave de idempotencia (IdempotencyKey) es obligatoria para procesar el checkout.', 1;
+        THROW 50072, 'La llave de idempotencia (IdempotencyKey) es obligatoria para procesar el checkout.', 1;
 
     -- 1. VERIFICACIÓN DE IDEMPOTENCIA (fuera o antes de escribir para evitar duplicados)
     DECLARE @IDPedidoExistente INT;
@@ -210,7 +210,7 @@ BEGIN
 
         -- 2. Validar usuario activo
         IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario AND Activo = 1)
-            ;THROW 50004, 'El usuario no existe o se encuentra inactivo.', 1;
+            THROW 50004, 'El usuario no existe o se encuentra inactivo.', 1;
 
         -- 3. Validar dirección de entrega perteneciente al cliente (RF-01, RF-06)
         DECLARE @DireccionEntregaTexto NVARCHAR(500);
@@ -226,7 +226,7 @@ BEGIN
           AND d.Activo = 1;
 
         IF @DireccionEntregaTexto IS NULL
-            ;THROW 50008, 'La dirección de entrega seleccionada no existe o no pertenece al cliente.', 1;
+            THROW 50008, 'La dirección de entrega seleccionada no existe o no pertenece al cliente.', 1;
 
         -- 4. Obtener carrito activo del usuario con bloqueo
         DECLARE @IDCarrito INT;
@@ -238,7 +238,7 @@ BEGIN
         ORDER BY IDCarrito DESC;
 
         IF @IDCarrito IS NULL OR NOT EXISTS (SELECT 1 FROM dbo.CarritoDetalle WHERE IDCarrito = @IDCarrito)
-            ;THROW 50035, 'El carrito de compras está vacío o ya fue procesado.', 1;
+            THROW 50035, 'El carrito de compras está vacío o ya fue procesado.', 1;
 
         -- 5. Barrido de reservas expiradas sobre las variantes del carrito
         UPDATE r
@@ -274,6 +274,10 @@ BEGIN
         DECLARE @SKUIter VARCHAR(50);
         DECLARE @NombreVarianteIter NVARCHAR(100);
         DECLARE @DisponibleVentaIter BIT;
+        DECLARE @MsgProdInactivo NVARCHAR(250);
+        DECLARE @StockDispMsg INT;
+        DECLARE @MsgSinStockCheckout NVARCHAR(250);
+        DECLARE @SubBruto DECIMAL(12,2);
 
         DECLARE cur_checkout CURSOR LOCAL FAST_FORWARD FOR
             SELECT cd.IDVariante, cd.Cantidad
@@ -301,10 +305,10 @@ BEGIN
 
             IF @DisponibleVentaIter = 0
             BEGIN
-                DECLARE @MsgProdInactivo NVARCHAR(250) = CONCAT(
+                SET @MsgProdInactivo = CONCAT(
                     N'El producto "', @NombreVarianteIter, N'" (SKU: ', @SKUIter, N') ya no se encuentra disponible para la venta.'
                 );
-                ;THROW 50032, @MsgProdInactivo, 1;
+                THROW 50032, @MsgProdInactivo, 1;
             END
 
             -- Calcular reservas activas de OTROS usuarios sobre esta variante
@@ -317,16 +321,16 @@ BEGIN
 
             IF (@StockFisicoIter - @ReservadoOtrosIter) < @CantidadIter
             BEGIN
-                DECLARE @StockDispMsg INT = CASE WHEN (@StockFisicoIter - @ReservadoOtrosIter) < 0 THEN 0 ELSE (@StockFisicoIter - @ReservadoOtrosIter) END;
-                DECLARE @MsgSinStockCheckout NVARCHAR(250) = CONCAT(
+                SET @StockDispMsg = CASE WHEN (@StockFisicoIter - @ReservadoOtrosIter) < 0 THEN 0 ELSE (@StockFisicoIter - @ReservadoOtrosIter) END;
+                SET @MsgSinStockCheckout = CONCAT(
                     N'No hay existencia disponible para "', @NombreVarianteIter,
                     N'" (SKU: ', @SKUIter, N'). Solicitado: ', @CantidadIter,
                     N', Disponible: ', @StockDispMsg, N'.'
                 );
-                ;THROW 50033, @MsgSinStockCheckout, 1;
+                THROW 50033, @MsgSinStockCheckout, 1;
             END
 
-            DECLARE @SubBruto DECIMAL(12,2) = CAST(CAST(@CantidadIter AS DECIMAL(12,2)) * @PrecioIter AS DECIMAL(12,2));
+            SET @SubBruto = CAST(CAST(@CantidadIter AS DECIMAL(12,2)) * @PrecioIter AS DECIMAL(12,2));
 
             INSERT INTO #LineasCheckout (
                 IDVariante,
@@ -400,7 +404,7 @@ BEGIN
             ) AS calc;
 
             IF @CuponEsValido = 0
-                ;THROW 50060, @MensajeErrorCupon, 1;
+                THROW 50060, @MensajeErrorCupon, 1;
 
             -- Prorratear el descuento entre las líneas elegibles en #LineasCheckout sin perder ni un centavo
             IF @MontoDescuentoPedido > 0.00
@@ -718,7 +722,7 @@ BEGIN
           AND u.Activo = 1;
 
         IF @RolUsuario IS NULL
-            ;THROW 50004, 'El usuario que intenta cambiar el estado no existe o está inactivo.', 1;
+            THROW 50004, 'El usuario que intenta cambiar el estado no existe o está inactivo.', 1;
 
         -- Bloquear el pedido a modificar
         DECLARE @EstadoActual VARCHAR(30);
@@ -731,17 +735,17 @@ BEGIN
         WHERE IDPedido = @IDPedido;
 
         IF @EstadoActual IS NULL
-            ;THROW 50070, 'El pedido especificado no existe.', 1;
+            THROW 50070, 'El pedido especificado no existe.', 1;
 
         -- Control de acceso por rol (RF-01 y RF-07):
         -- Un Cliente solo puede cancelar su propio pedido; no puede avanzar estados operativos
         IF @RolUsuario = 'Cliente'
         BEGIN
             IF @IDClientePedido <> @IDUsuario
-                ;THROW 50071, 'No tiene permisos para modificar un pedido de otro cliente.', 1;
+                THROW 50071, 'No tiene permisos para modificar un pedido de otro cliente.', 1;
 
             IF @EstadoNuevo <> 'CANCELADO'
-                ;THROW 50073, 'Un cliente únicamente puede solicitar la cancelación de su pedido.', 1;
+                THROW 50073, 'Un cliente únicamente puede solicitar la cancelación de su pedido.', 1;
         END
 
         -- Validar transición en la máquina de estados (RF-07)
@@ -751,7 +755,7 @@ BEGIN
                 N'Transición de estado no permitida: no es posible cambiar un pedido de "',
                 @EstadoActual, N'" a "', @EstadoNuevo, N'".'
             );
-            ;THROW 50074, @MensajeTransicionInvalida, 1;
+            THROW 50074, @MensajeTransicionInvalida, 1;
         END
 
         -- Si el nuevo estado es CANCELADO, reintegrar las existencias al inventario y al Kardex (RF-07)
@@ -914,7 +918,7 @@ BEGIN
       AND u.Activo = 1;
 
     IF @RolSolicitante IS NULL
-        ;THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
+        THROW 50004, 'El usuario solicitante no existe o está inactivo.', 1;
 
     -- Si es Cliente, aislar estrictamente a sus propios pedidos (RF-01)
     IF @RolSolicitante = 'Cliente'

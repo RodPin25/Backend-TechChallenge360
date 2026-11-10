@@ -8,3 +8,7 @@ AGENTS.md
 .antigravity/
 .agents/
 REQUIREMENTS.md
+
+# Almacenamiento local de archivos multimedia
+uploads/**/*
+!uploads/**/.gitkeep

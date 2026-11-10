@@ -32,6 +32,7 @@ IF OBJECT_ID('dbo.CarritoDetalle', 'U') IS NOT NULL DROP TABLE dbo.CarritoDetall
 IF OBJECT_ID('dbo.Carritos', 'U') IS NOT NULL DROP TABLE dbo.Carritos;
 IF OBJECT_ID('dbo.ReservasExistencia', 'U') IS NOT NULL DROP TABLE dbo.ReservasExistencia;
 IF OBJECT_ID('dbo.HistorialPrecios', 'U') IS NOT NULL DROP TABLE dbo.HistorialPrecios;
+IF OBJECT_ID('dbo.VarianteImagenes', 'U') IS NOT NULL DROP TABLE dbo.VarianteImagenes;
 IF OBJECT_ID('dbo.VarianteAtributos', 'U') IS NOT NULL DROP TABLE dbo.VarianteAtributos;
 IF OBJECT_ID('dbo.Variantes', 'U') IS NOT NULL DROP TABLE dbo.Variantes;
 IF OBJECT_ID('dbo.Cupones', 'U') IS NOT NULL DROP TABLE dbo.Cupones;
@@ -132,8 +133,22 @@ IDVarianteAtributo INT IDENTITY(1,1) NOT NULL,
 IDVariante INT NOT NULL,
 Clave NVARCHAR(50) NOT NULL,
 Valor NVARCHAR(100) NOT NULL,
+Activo BIT NOT NULL CONSTRAINT DF_VarianteAtributos_Activo DEFAULT (1),
 CONSTRAINT PK_VarianteAtributos PRIMARY KEY CLUSTERED (IDVarianteAtributo),
 CONSTRAINT FK_VarianteAtributos_Variantes FOREIGN KEY (IDVariante) REFERENCES dbo.Variantes (IDVariante)
+);
+GO
+
+CREATE TABLE dbo.VarianteImagenes (
+    IDVarianteImagen INT IDENTITY(1,1) NOT NULL,
+    IDVariante INT NOT NULL,
+    UrlImagen NVARCHAR(500) NOT NULL,
+    EsPrincipal BIT NOT NULL CONSTRAINT DF_VarianteImagenes_EsPrincipal DEFAULT (0),
+    Orden INT NOT NULL CONSTRAINT DF_VarianteImagenes_Orden DEFAULT (1),
+    Activo BIT NOT NULL CONSTRAINT DF_VarianteImagenes_Activo DEFAULT (1),
+    FechaCreacion DATETIME2(0) NOT NULL CONSTRAINT DF_VarianteImagenes_Fecha DEFAULT (SYSDATETIME()),
+    CONSTRAINT PK_VarianteImagenes PRIMARY KEY CLUSTERED (IDVarianteImagen),
+    CONSTRAINT FK_VarianteImagenes_Variantes FOREIGN KEY (IDVariante) REFERENCES dbo.Variantes (IDVariante)
 );
 GO
 
@@ -387,6 +402,8 @@ GO
 -- ÍNDICES PARA RENDIMIENTO
 -- ============================================================================
 CREATE NONCLUSTERED INDEX IX_Variantes_IDProducto ON dbo.Variantes (IDProducto);
+CREATE NONCLUSTERED INDEX IX_VarianteAtributos_Variante ON dbo.VarianteAtributos (IDVariante, Activo);
+CREATE NONCLUSTERED INDEX IX_VarianteImagenes_Variante_Orden ON dbo.VarianteImagenes (IDVariante, Activo, Orden) INCLUDE (UrlImagen, EsPrincipal);
 CREATE NONCLUSTERED INDEX IX_Reservas_Variante_Estado ON dbo.ReservasExistencia (IDVariante, Estado, FechaExpiracion);
 CREATE NONCLUSTERED INDEX IX_Carritos_Usuario_Estado ON dbo.Carritos (IDUsuario, Estado);
 CREATE NONCLUSTERED INDEX IX_Pedidos_Usuario_Estado ON dbo.Pedidos (IDUsuario, EstadoPedido);

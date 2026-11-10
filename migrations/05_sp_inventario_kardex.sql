@@ -74,12 +74,12 @@ BEGIN
         BEGIN TRANSACTION;
 
         IF @Cantidad <= 0
-            ;THROW 50030, 'La cantidad a reservar debe ser mayor a cero.', 1;
+            THROW 50030, 'La cantidad a reservar debe ser mayor a cero.', 1;
 
         SET @TokenSesion = NULLIF(LTRIM(RTRIM(@TokenSesion)), '');
 
         IF @IDUsuario IS NULL AND @TokenSesion IS NULL
-            ;THROW 50031, 'Debe especificar un usuario autenticado o un token de sesión para reservar existencia.', 1;
+            THROW 50031, 'Debe especificar un usuario autenticado o un token de sesión para reservar existencia.', 1;
 
         -- 1. Bloqueo pesimista sobre la fila de la variante para serializar accesos concurrentes
         DECLARE @StockFisico INT;
@@ -98,10 +98,10 @@ BEGIN
         WHERE v.IDVariante = @IDVariante;
 
         IF @StockFisico IS NULL
-            ;THROW 50019, 'La variante solicitada no existe.', 1;
+            THROW 50019, 'La variante solicitada no existe.', 1;
 
         IF @VarianteActiva = 0
-            ;THROW 50032, 'El producto o variante seleccionada ya no se encuentra disponible para la venta.', 1;
+            THROW 50032, 'El producto o variante seleccionada ya no se encuentra disponible para la venta.', 1;
 
         -- 2. Barrido automático de reservas expiradas sobre esta variante
         UPDATE dbo.ReservasExistencia
@@ -139,7 +139,7 @@ BEGIN
                 N'" (SKU: ', @SKU, N'). Solicitado: ', @Cantidad,
                 N', Disponible: ', CASE WHEN @StockDisponibleReal < 0 THEN 0 ELSE @StockDisponibleReal END, N'.'
             );
-            ;THROW 50033, @MensajeSinStock, 1;
+            THROW 50033, @MensajeSinStock, 1;
         END
 
         -- 5. Crear la reserva temporal con TTL de 15 minutos
@@ -244,10 +244,10 @@ BEGIN
                   OR (@IDUsuario IS NULL AND @TokenSesion IS NOT NULL AND c.TokenInvitado = @TokenSesion)
               )
         )
-            ;THROW 50034, 'El carrito especificado no existe, no está activo o no pertenece al usuario.', 1;
+            THROW 50034, 'El carrito especificado no existe, no está activo o no pertenece al usuario.', 1;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.CarritoDetalle WHERE IDCarrito = @IDCarrito)
-            ;THROW 50035, 'El carrito se encuentra vacío; no hay productos para reservar.', 1;
+            THROW 50035, 'El carrito se encuentra vacío; no hay productos para reservar.', 1;
 
         -- 1. Liberar reservas expiradas globales de las variantes involucradas
         UPDATE r
@@ -275,6 +275,9 @@ BEGIN
         DECLARE @VarianteActiva BIT;
         DECLARE @SKU VARCHAR(50);
         DECLARE @NombreVariante NVARCHAR(100);
+        DECLARE @Disp INT;
+        DECLARE @MsgInactivo NVARCHAR(250);
+        DECLARE @MsgStock NVARCHAR(250);
         DECLARE @FechaAhora DATETIME2(0) = SYSDATETIME();
         DECLARE @FechaExpiracion DATETIME2(0) = DATEADD(MINUTE, 15, @FechaAhora);
 
@@ -301,10 +304,10 @@ BEGIN
 
             IF @VarianteActiva = 0
             BEGIN
-                DECLARE @MsgInactivo NVARCHAR(250) = CONCAT(
+                SET @MsgInactivo = CONCAT(
                     N'El artículo "', @NombreVariante, N'" (SKU: ', @SKU, N') ya no se encuentra disponible.'
                 );
-                ;THROW 50032, @MsgInactivo, 1;
+                THROW 50032, @MsgInactivo, 1;
             END
 
             SELECT @StockReservadoOtros = ISNULL(SUM(r.Cantidad), 0)
@@ -315,13 +318,13 @@ BEGIN
 
             IF (@StockFisico - @StockReservadoOtros) < @CantidadSolicitada
             BEGIN
-                DECLARE @Disp INT = CASE WHEN (@StockFisico - @StockReservadoOtros) < 0 THEN 0 ELSE (@StockFisico - @StockReservadoOtros) END;
-                DECLARE @MsgStock NVARCHAR(250) = CONCAT(
+                SET @Disp = CASE WHEN (@StockFisico - @StockReservadoOtros) < 0 THEN 0 ELSE (@StockFisico - @StockReservadoOtros) END;
+                SET @MsgStock = CONCAT(
                     N'Existencia insuficiente para "', @NombreVariante,
                     N'" (SKU: ', @SKU, N'). Solicitado: ', @CantidadSolicitada,
                     N', Disponible: ', @Disp, N'.'
                 );
-                ;THROW 50033, @MsgStock, 1;
+                THROW 50033, @MsgStock, 1;
             END
 
             INSERT INTO dbo.ReservasExistencia (
@@ -399,7 +402,7 @@ BEGIN
         SET @TokenSesion = NULLIF(LTRIM(RTRIM(@TokenSesion)), '');
 
         IF @IDReserva IS NULL AND @IDUsuario IS NULL AND @TokenSesion IS NULL
-            ;THROW 50036, 'Debe indicar el IDReserva, IDUsuario o TokenSesion a liberar.', 1;
+            THROW 50036, 'Debe indicar el IDReserva, IDUsuario o TokenSesion a liberar.', 1;
 
         UPDATE dbo.ReservasExistencia
         SET Estado = 'LIBERADA'
@@ -449,17 +452,17 @@ BEGIN
         BEGIN TRANSACTION;
 
         IF @TipoMovimiento NOT IN ('AJUSTE_ENTRADA', 'AJUSTE_SALIDA')
-            ;THROW 50037, 'El tipo de movimiento manual debe ser AJUSTE_ENTRADA o AJUSTE_SALIDA.', 1;
+            THROW 50037, 'El tipo de movimiento manual debe ser AJUSTE_ENTRADA o AJUSTE_SALIDA.', 1;
 
         IF @Cantidad <= 0
-            ;THROW 50038, 'La cantidad del ajuste de inventario debe ser mayor a cero.', 1;
+            THROW 50038, 'La cantidad del ajuste de inventario debe ser mayor a cero.', 1;
 
         SET @Motivo = LTRIM(RTRIM(@Motivo));
         IF ISNULL(@Motivo, '') = ''
-            ;THROW 50039, 'El motivo del ajuste manual de inventario es obligatorio.', 1;
+            THROW 50039, 'El motivo del ajuste manual de inventario es obligatorio.', 1;
 
         IF NOT EXISTS (SELECT 1 FROM dbo.Usuarios WHERE IDUsuario = @IDUsuario AND Activo = 1)
-            ;THROW 50004, 'El usuario operador/administrador no existe o está inactivo.', 1;
+            THROW 50004, 'El usuario operador/administrador no existe o está inactivo.', 1;
 
         -- Bloqueo pesimista sobre la variante para garantizar consistencia con el Kardex
         DECLARE @StockAnterior INT;
@@ -474,7 +477,7 @@ BEGIN
         WHERE IDVariante = @IDVariante;
 
         IF @StockAnterior IS NULL
-            ;THROW 50019, 'La variante especificada no existe.', 1;
+            THROW 50019, 'La variante especificada no existe.', 1;
 
         DECLARE @StockActual INT;
 
@@ -491,7 +494,7 @@ BEGIN
                     N' unidades dejaría en negativo la existencia física de "', @NombreVariante,
                     N'" (Stock actual: ', @StockAnterior, N').'
                 );
-                ;THROW 50040, @MsgNegativo, 1;
+                THROW 50040, @MsgNegativo, 1;
             END
 
             SET @StockActual = @StockAnterior - @Cantidad;
